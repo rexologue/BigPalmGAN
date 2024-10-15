@@ -165,7 +165,7 @@ def validate(generator,
     val_d_loss = 0
     
     with torch.no_grad():
-        for batch_idx, (real_images, labels) in enumerate(val_loader):
+        for real_images, labels in val_loader:
             real_images = real_images.to(device)
             labels = labels.to(device)
 
@@ -194,8 +194,8 @@ def validate(generator,
                 real_fid.append(real_images)
                 fake_fid.append(fake_images)
 
-            # Сохранение сгенерированных изображений
-            save_sample_images(fake_images, epoch, "validation", batch_idx, img_dir)
+        # Сохранение сгенерированных изображений
+        save_sample_images(fake_images, epoch, "validation", "End", img_dir)
             
     real_fid_tensor = torch.cat(real_fid, dim=0)
     fake_fid_tensor = torch.cat(fake_fid, dim=0)
