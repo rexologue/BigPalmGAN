@@ -153,7 +153,7 @@ validation_transform = transforms.Compose([
 ################################################################
 # //////////////////////////////////////////////////////////// #
 ################################################################
-def setup_loader(path, batch_size, train_phase=True):
+def setup_loader(path, batch_size, use_augs, train_phase=True):
     """
     Создает загрузчик данных для обучения или валидации.
 
@@ -167,7 +167,7 @@ def setup_loader(path, batch_size, train_phase=True):
     """
     
     # Создание набора данных с соответствующими преобразованиями
-    if train_phase:
+    if train_phase and use_augs:
         dataset = PalmDataset(root_dir=path, transform=training_transform, is_validation=False)
     else:
         dataset = PalmDataset(root_dir=path, transform=validation_transform, is_validation=True)
