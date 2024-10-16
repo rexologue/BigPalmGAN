@@ -24,7 +24,7 @@ if __name__ == '__main__':
     parser.add_argument('--classification_loss_weight', type=float, required=True, help='Classification loss weight')
     parser.add_argument('--accumulation_steps', type=int, required=True, help='Steps for gradient accumulation')
     parser.add_argument('--unfreeze_last_n', type=int, required=True, help='How much last generator layers to unfreeze')
-    parser.add_argument('--use_augs', type=bool, requred=True, help='Use augmentations ir not')
+    parser.add_argument('--use_augs', type=bool, required=True, help='Use augmentations or not')
     parser.add_argument('--train_dir', type=str, required=True, help='Path to train directory')
     parser.add_argument('--eval_dir', type=str, required=True, help='Path to eval directory')
     parser.add_argument('--print_every_n_batches', type=int, required=True, help='How often to print training stats')
