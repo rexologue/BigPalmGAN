@@ -24,6 +24,7 @@ if __name__ == '__main__':
     parser.add_argument('--classification_loss_weight', type=float, required=True, help='Classification loss weight')
     parser.add_argument('--accumulation_steps', type=int, required=True, help='Steps for gradient accumulation')
     parser.add_argument('--unfreeze_last_n', type=int, required=True, help='How much last generator layers to unfreeze')
+    parser.add_argument('--use_augs', type=bool, requred=True, help='Use augmentations ir not')
     parser.add_argument('--train_dir', type=str, required=True, help='Path to train directory')
     parser.add_argument('--eval_dir', type=str, required=True, help='Path to eval directory')
     parser.add_argument('--print_every_n_batches', type=int, required=True, help='How often to print training stats')
@@ -58,8 +59,8 @@ if __name__ == '__main__':
         if checkpoint['optimizer_G_state_dict'] is not None:    
             optimizer_D.load_state_dict(checkpoint['optimizer_D_state_dict'])
         
-    train_loader = setup_loader(args.train_dir, args.batch_size)
-    eval_loader = setup_loader(args.eval_dir, args.batch_size, train_phase=False)
+    train_loader = setup_loader(args.train_dir, args.batch_size, args.use_augs)
+    eval_loader = setup_loader(args.eval_dir, args.batch_size, args.use_augs, train_phase=False)
     
     adversarial_loss = torch.nn.BCEWithLogitsLoss()
     pixel_loss = torch.nn.MSELoss()
