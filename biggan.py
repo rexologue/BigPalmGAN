@@ -296,7 +296,7 @@ class BigGAN(nn.Module):
         assert 0 < truncation <= 1
 
         if isinstance(self.embeddings, nn.Embedding):
-            embed = self.embeddings(class_label.argmax())
+            embed = self.embeddings(class_label.argmax(dim=1))
         else:
             embed = self.embeddings(class_label)
             
