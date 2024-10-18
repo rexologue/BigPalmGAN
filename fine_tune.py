@@ -7,6 +7,7 @@ from model_utils import setup_generator, setup_discriminator
 from data import setup_loader 
 from support_utils import create_unique_directory
 from fid.inception import setup_inception
+from fid.perceptual_loss import InceptionPerceptualLoss
 
 if __name__ == '__main__':
     # Создание парсера аргументов
@@ -22,6 +23,7 @@ if __name__ == '__main__':
     parser.add_argument('--adversarial_loss_weight', type=float, required=True, help='Adversarial loss weight')
     parser.add_argument('--pixel_loss_weight', type=float, required=True, help='Pixel loss weight')
     parser.add_argument('--classification_loss_weight', type=float, required=True, help='Classification loss weight')
+    parser.add_argument('--perceptual_loss_weight', type=float, required=True, help='Perceptual loss weight')
     parser.add_argument('--accumulation_steps', type=int, required=True, help='Steps for gradient accumulation')
     parser.add_argument('--unfreeze_last_n', type=int, required=True, help='How much last generator layers to unfreeze')
     parser.add_argument('--use_augs', type=bool, required=True, help='Use augmentations or not')
@@ -65,6 +67,7 @@ if __name__ == '__main__':
     adversarial_loss = torch.nn.BCEWithLogitsLoss()
     pixel_loss = torch.nn.MSELoss()
     classification_loss = torch.nn.CrossEntropyLoss()
+    percptual_loss = InceptionPerceptualLoss()
     
     run_dir = create_unique_directory(os.path.join(args.output_dir, 'biggan_fine_tune_run'))
     
@@ -89,9 +92,11 @@ if __name__ == '__main__':
         adversarial_loss=adversarial_loss,
         pixel_loss=pixel_loss,
         classification_loss=classification_loss,
+        percptual_loss=percptual_loss,
         adversarial_loss_weight=args.adversarial_loss_weight,
         pixel_loss_weight=args.pixel_loss_weight,
         classification_loss_weight=args.classification_loss_weight,
+        perceptual_loss_weight=args.perceptual_loss_weight,
         accumulation_steps=args.accumulation_steps,
         print_every_n_batches=args.print_every_n_batches,
         num_classes=args.num_classes,

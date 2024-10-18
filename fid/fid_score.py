@@ -22,12 +22,6 @@ def get_activations(
     num_images = images_tensor.size(0)
 
     if batch_size > num_images:
-        print(
-            (
-                "Warning: batch size is bigger than the data size. "
-                "Setting batch size to data size"
-            )
-        )
         batch_size = num_images
 
     dataloader = torch.utils.data.DataLoader(

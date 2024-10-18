@@ -16,9 +16,11 @@ def train(epochs,
           adversarial_loss,
           pixel_loss,
           classification_loss,
+          perceptual_loss,
           adversarial_loss_weight,
           pixel_loss_weight,
           classification_loss_weight,
+          perceptual_loss_weight,
           accumulation_steps,
           print_every_n_batches,
           num_classes,
@@ -42,9 +44,11 @@ def train(epochs,
     - adversarial_loss: Функция потерь для дискриминатора (обычно BCELoss).
     - pixel_loss: Функция потерь для сравнения пиксельных значений (обычно L1Loss или MSELoss).
     - classification_loss: Функция потерь для классификации (обычно CrossEntropyLoss).
+    - perceptual_loss: Функция перцептивных потерь.
     - adversarial_loss_weight: Вес для потерь дискриминатора.
     - pixel_loss_weight: Вес для потерь пиксельных значений.
     - classification_loss_weight: Вес для потерь классификации.
+    - perceptual_loss_weight: Вес для потерь перцептивных значений.
     - accumulation_steps: Количество шагов накопления градиентов перед обновлением весов.
     - print_every_n_batches: Частота вывода статистики во время обучения.
     - num_classes: Количество классов в датасете.
@@ -82,8 +86,8 @@ def train(epochs,
             # Обучение генератора с накоплением градиентов
             g_loss = 0
             for _ in range(accumulation_steps):
-                g_loss += train_generator(generator, discriminator, real_images, labels, adversarial_loss, pixel_loss, 
-                                          adversarial_loss_weight, pixel_loss_weight, accumulation_steps, num_classes, device)
+                g_loss += train_generator(generator, discriminator, real_images, labels, inception, adversarial_loss, pixel_loss, perceptual_loss,
+                                          adversarial_loss_weight, pixel_loss_weight, perceptual_loss_weight, accumulation_steps, num_classes, device)
 
             g_loss_accum += g_loss
 

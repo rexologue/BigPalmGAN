@@ -66,10 +66,13 @@ def train_generator(generator,
                     discriminator, 
                     real_images, 
                     labels, 
+                    inception,
                     adversarial_loss, 
                     pixel_loss, 
+                    perceptual_loss,
                     adversarial_loss_weight,
                     pixel_loss_weight,
+                    perceptual_loss_weight,
                     accumulation_steps,
                     num_classes,
                     device
@@ -84,8 +87,10 @@ def train_generator(generator,
     - labels: Метки классов для реальных изображений.
     - adversarial_loss: Функция потерь для дискриминатора (обычно BCELoss).
     - pixel_loss: Функция потерь для сравнения пиксельных значений (обычно L1Loss или MSELoss).
+    - perceptual_loss: Функция перцептивных потерь.
     - adversarial_loss_weight: Вес для потерь дискриминатора.
     - pixel_loss_weight: Вес для потерь пиксельных значений.
+    - perceptual_loss_weight: Вес для потерь перцептивных значений.
     - accumulation_steps: Количество шагов накопления градиентов перед обновлением весов.
     - num_classes: Количество классов в датасете.
     - device: Устройство (GPU/CPU), на котором происходит обучение.
@@ -100,7 +105,12 @@ def train_generator(generator,
 
     # Вычисление потерь для поддельных изображений
     fake_output, _ = discriminator(fake_images, labels)
-    g_loss = (adversarial_loss(fake_output, torch.ones_like(fake_output)) * adversarial_loss_weight) + (pixel_loss(fake_images, real_images) * pixel_loss_weight)
+    
+    adv_loss = adversarial_loss(fake_output, torch.ones_like(fake_output)) * adversarial_loss_weight
+    pix_loss = pixel_loss(fake_images, real_images) * pixel_loss_weight
+    per_loss = perceptual_loss(inception, fake_images, real_images) * perceptual_loss_weight
+    
+    g_loss = adv_loss + pix_loss + per_loss
 
     # Накопление градиентов
     g_loss = g_loss / accumulation_steps
