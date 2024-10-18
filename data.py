@@ -15,39 +15,34 @@ class ConditionalTransform:
         """
         Инициализация словаря преобразований для каждого класса и нормализации.
         """
-        
         # Определение преобразований для каждого класса (0, 1, 2, 3)
         self.transforms_dict = {
             0: transforms.Compose([
-                transforms.RandomRotation(10),
-                transforms.ColorJitter(brightness=0.05, contrast=0.05),
-                transforms.RandomResizedCrop(512, scale=(0.9, 1.0)),
-                transforms.RandomHorizontalFlip(p=0.5),
+                transforms.RandomRotation(5),  # Меньший угол поворота
+                transforms.ColorJitter(brightness=0.02, contrast=0.02),  # Более слабые изменения яркости и контрастности
+                transforms.RandomResizedCrop(512, scale=(0.95, 1.0)),  # Уменьшена область ресайза
                 transforms.ToTensor()
             ]),
             1: transforms.Compose([
-                transforms.RandomRotation(15),
-                transforms.ColorJitter(brightness=0.1, contrast=0.1),
-                transforms.RandomAffine(degrees=10, translate=(0.05, 0.05)),
-                transforms.RandomVerticalFlip(p=0.3),
+                transforms.RandomRotation(7),
+                transforms.ColorJitter(brightness=0.04, contrast=0.04),
+                transforms.RandomAffine(degrees=5, translate=(0.02, 0.02)),  # Уменьшено смещение
                 transforms.ToTensor()
             ]),
             2: transforms.Compose([
-                transforms.RandomRotation(7),
-                transforms.ColorJitter(brightness=0.08, contrast=0.08),
-                transforms.RandomResizedCrop(512, scale=(0.92, 1.0)),
-                transforms.RandomHorizontalFlip(p=0.2),
+                transforms.RandomRotation(3),
+                transforms.ColorJitter(brightness=0.03, contrast=0.03),
+                transforms.RandomResizedCrop(512, scale=(0.96, 1.0)),
                 transforms.ToTensor()
             ]),
             3: transforms.Compose([
-                transforms.RandomRotation(12),
-                transforms.ColorJitter(brightness=0.12, contrast=0.12),
-                transforms.RandomAffine(degrees=12, translate=(0.1, 0.1)),
-                transforms.RandomVerticalFlip(p=0.4),
+                transforms.RandomRotation(6),
+                transforms.ColorJitter(brightness=0.05, contrast=0.05),
+                transforms.RandomAffine(degrees=6, translate=(0.03, 0.03)),
                 transforms.ToTensor()
             ])
         }
-        
+
         # Нормализация, общая для всех классов
         self.normalize = transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
 
@@ -62,7 +57,6 @@ class ConditionalTransform:
         Возвращает:
         - img: Преобразованное изображение.
         """
-        
         # Применение преобразований на основе метки класса
         img = self.transforms_dict[label](img)
         img = self.normalize(img)
