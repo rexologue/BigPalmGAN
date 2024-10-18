@@ -284,7 +284,12 @@ class BigGAN(nn.Module):
     def __init__(self, config):
         super(BigGAN, self).__init__()
         self.config = config
-        self.embeddings = nn.Linear(config.num_classes, config.z_dim, bias=False)
+        
+        if config.num_classes > 100:
+            self.embeddings = nn.Linear(config.num_classes, config.z_dim, bias=False)
+        else:
+            self.embeddings = nn.Embedding(config.num_classes, config.z_dim, bias=False)
+            
         self.generator = Generator(config)
 
     def forward(self, z, class_label, truncation):
@@ -295,6 +300,7 @@ class BigGAN(nn.Module):
 
         z = self.generator(cond_vector, truncation)
         return z
+
 
 def truncated_noise_sample(batch_size=1, dim_z=128, truncation=1., seed=None):
     """ Create a truncated noise vector.
