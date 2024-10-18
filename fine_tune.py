@@ -68,7 +68,7 @@ if __name__ == '__main__':
     d_loss_fn = DiscriminatorHingeLoss()
     pixel_loss = torch.nn.MSELoss()
     classification_loss = torch.nn.CrossEntropyLoss()
-    percptual_loss = InceptionPerceptualLoss()
+    perceptual_loss = InceptionPerceptualLoss()
     
     run_dir = create_unique_directory(os.path.join(args.output_dir, 'biggan_fine_tune_run'))
     
@@ -94,7 +94,7 @@ if __name__ == '__main__':
         d_loss_fn=d_loss_fn,
         pixel_loss=pixel_loss,
         classification_loss=classification_loss,
-        percptual_loss=percptual_loss,
+        perceptual_loss=perceptual_loss,
         g_loss_weight=args.g_loss_weight,
         pixel_loss_weight=args.pixel_loss_weight,
         classification_loss_weight=args.classification_loss_weight,
