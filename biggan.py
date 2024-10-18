@@ -288,7 +288,7 @@ class BigGAN(nn.Module):
         if config.num_classes > 100:
             self.embeddings = nn.Linear(config.num_classes, config.z_dim, bias=False)
         else:
-            self.embeddings = nn.Embedding(config.num_classes, config.z_dim, bias=False)
+            self.embeddings = nn.Embedding(config.num_classes, config.z_dim)
             
         self.generator = Generator(config)
 
