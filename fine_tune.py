@@ -5,9 +5,9 @@ import torch
 from train_loop import train
 from model_utils import setup_generator, setup_discriminator
 from data import setup_loader 
-from support_utils import create_unique_directory
+from support_utils import create_unique_directory, str2bool
 from fid.inception import setup_inception
-from fid.perceptual_loss import InceptionPerceptualLoss
+from losses import InceptionPerceptualLoss, DiscriminatorHingeLoss, GeneratorHingeLoss
 
 if __name__ == '__main__':
     # Создание парсера аргументов
@@ -20,13 +20,13 @@ if __name__ == '__main__':
     parser.add_argument('--lr_d', type=float, required=True, help='Discriminator learning rate')
     parser.add_argument('--weight_decay', type=float, required=True, help='Weight decay')
     parser.add_argument('--batch_size', type=int, required=True, help='Batch size')
-    parser.add_argument('--adversarial_loss_weight', type=float, required=True, help='Adversarial loss weight')
+    parser.add_argument('--g_loss_weight', type=float, required=True, help='Generator loss function weight')
     parser.add_argument('--pixel_loss_weight', type=float, required=True, help='Pixel loss weight')
     parser.add_argument('--classification_loss_weight', type=float, required=True, help='Classification loss weight')
     parser.add_argument('--perceptual_loss_weight', type=float, required=True, help='Perceptual loss weight')
     parser.add_argument('--accumulation_steps', type=int, required=True, help='Steps for gradient accumulation')
     parser.add_argument('--unfreeze_last_n', type=int, required=True, help='How much last generator layers to unfreeze')
-    parser.add_argument('--use_augs', type=bool, required=True, help='Use augmentations or not')
+    parser.add_argument('--use_augs', type=str2bool, nargs='?', const=True, default=False, help='Use augmentations or not')
     parser.add_argument('--train_dir', type=str, required=True, help='Path to train directory')
     parser.add_argument('--eval_dir', type=str, required=True, help='Path to eval directory')
     parser.add_argument('--print_every_n_batches', type=int, required=True, help='How often to print training stats')
@@ -64,7 +64,8 @@ if __name__ == '__main__':
     train_loader = setup_loader(args.train_dir, args.batch_size, args.use_augs)
     eval_loader = setup_loader(args.eval_dir, args.batch_size, args.use_augs, train_phase=False)
     
-    adversarial_loss = torch.nn.BCEWithLogitsLoss()
+    g_loss_fn = GeneratorHingeLoss()
+    d_loss_fn = DiscriminatorHingeLoss()
     pixel_loss = torch.nn.MSELoss()
     classification_loss = torch.nn.CrossEntropyLoss()
     percptual_loss = InceptionPerceptualLoss()
@@ -89,11 +90,12 @@ if __name__ == '__main__':
         optimizer_D=optimizer_D,
         train_loader=train_loader,
         eval_loader=eval_loader,
-        adversarial_loss=adversarial_loss,
+        g_loss_fn=g_loss_fn,
+        d_loss_fn=d_loss_fn,
         pixel_loss=pixel_loss,
         classification_loss=classification_loss,
         percptual_loss=percptual_loss,
-        adversarial_loss_weight=args.adversarial_loss_weight,
+        g_loss_weight=args.g_loss_weight,
         pixel_loss_weight=args.pixel_loss_weight,
         classification_loss_weight=args.classification_loss_weight,
         perceptual_loss_weight=args.perceptual_loss_weight,

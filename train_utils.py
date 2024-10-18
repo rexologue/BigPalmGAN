@@ -9,7 +9,7 @@ def train_discriminator(generator,
                         discriminator, 
                         real_images, 
                         labels, 
-                        adversarial_loss, 
+                        d_loss_fn, 
                         classification_loss,
                         classification_loss_weight,
                         optimizer_D,
@@ -24,7 +24,7 @@ def train_discriminator(generator,
     - discriminator: Дискриминатор, который обучается различать реальные и поддельные изображения.
     - real_images: Батч реальных изображений.
     - labels: Метки классов для реальных изображений.
-    - adversarial_loss: Функция потерь для дискриминатора (обычно BCELoss).
+    - d_loss_fn: Функция потерь для дискриминатора (обычно HingeLoss).
     - classification_loss: Функция потерь для классификации (обычно CrossEntropyLoss).
     - classification_loss_weight: Вес для потерь классификации.
     - optimizer_D: Оптимизатор для дискриминатора.
@@ -33,31 +33,36 @@ def train_discriminator(generator,
 
     Возвращает:
     - d_loss.item(): Значение потерь дискриминатора.
+    - real_acc.item(): Точность для реальных изображений.
+    - fake_acc.item(): Точность для поддельных изображений.
     """
     
-    # Генерация шума и эмбеддингов классов для создания поддельных изображений
+    # Генерация фейковых изображений
     noise, class_embeds = get_latent_input(real_images.size(0), labels, num_classes, device)
-    fake_images = generator(noise, class_embeds, truncation=0.2).detach()
+    fake_images = generator(noise, class_embeds, truncation=0.2)
 
-    # Вычисление потерь для реальных изображений с учетом меток классов
-    real_binar_output, real_class_output = discriminator(real_images, labels)
-    real_binar_loss = adversarial_loss(real_binar_output, torch.ones_like(real_binar_output))
+    # Предсказания дискриминатора для реальных и фейковых изображений
+    real_outputs, real_class_outputs = discriminator(real_images, labels)  # Реальные изображения и предсказания классов
+    fake_outputs, _ = discriminator(fake_images.detach(), labels)  # Фейковые изображения (без обновления генератора)
+
+    # Потери дискриминатора по HingeLoss
+    d_hinge_loss = d_loss_fn(real_outputs, fake_outputs)  # Передаем реальные и фейковые выходы одновременно в HingeLoss
+
+    # Классификационные потери для реальных изображений
+    d_class_loss = classification_loss(real_class_outputs, labels) * classification_loss_weight
     
-    class_loss = classification_loss(real_class_output, labels)
+    d_loss = d_hinge_loss + d_class_loss
 
-    # Вычисление потерь для поддельных изображений с учетом меток классов
-    fake_binar_output, _ = discriminator(fake_images, labels)
-    fake_binar_loss = adversarial_loss(fake_binar_output, torch.zeros_like(fake_binar_output))
-
-    # Среднее значение потерь для реальных и поддельных изображений
-    d_loss = (real_binar_loss + fake_binar_loss) / 2 + (class_loss * classification_loss_weight)
-
-    # Обнуление градиентов и выполнение обратного распространения ошибки
+    # Обновление весов дискриминатора
     optimizer_D.zero_grad()
     d_loss.backward()
     optimizer_D.step()
 
-    return d_loss.item()
+    # Подсчет точности для реальных и фейковых изображений
+    real_acc = (real_outputs > 0).float().mean()
+    fake_acc = (fake_outputs < 0).float().mean()
+
+    return d_loss.item(), real_acc.item(), fake_acc.item()
 
 ################################################################
 # //////////////////////////////////////////////////////////// #
@@ -67,10 +72,10 @@ def train_generator(generator,
                     real_images, 
                     labels, 
                     inception,
-                    adversarial_loss, 
+                    g_loss_fn, 
                     pixel_loss, 
                     perceptual_loss,
-                    adversarial_loss_weight,
+                    g_loss_weight,
                     pixel_loss_weight,
                     perceptual_loss_weight,
                     accumulation_steps,
@@ -85,10 +90,10 @@ def train_generator(generator,
     - discriminator: Дискриминатор, используемый для оценки поддельных изображений.
     - real_images: Батч реальных изображений.
     - labels: Метки классов для реальных изображений.
-    - adversarial_loss: Функция потерь для дискриминатора (обычно BCELoss).
+    - g_loss_fn: Функция потерь для генератора (обычно HingeLoss).
     - pixel_loss: Функция потерь для сравнения пиксельных значений (обычно L1Loss или MSELoss).
     - perceptual_loss: Функция перцептивных потерь.
-    - adversarial_loss_weight: Вес для потерь дискриминатора.
+    - g_loss_weight: Вес для потерь генератора.
     - pixel_loss_weight: Вес для потерь пиксельных значений.
     - perceptual_loss_weight: Вес для потерь перцептивных значений.
     - accumulation_steps: Количество шагов накопления градиентов перед обновлением весов.
@@ -99,25 +104,25 @@ def train_generator(generator,
     - g_loss.item(): Значение потерь генератора.
     """
     
-    # Генерация шума и эмбеддингов классов для создания поддельных изображений
+    # Генерация фейковых изображений
     noise, class_embeds = get_latent_input(real_images.size(0), labels, num_classes, device)
     fake_images = generator(noise, class_embeds, truncation=0.2)
 
-    # Вычисление потерь для поддельных изображений
-    fake_output, _ = discriminator(fake_images, labels)
-    
-    adv_loss = adversarial_loss(fake_output, torch.ones_like(fake_output)) * adversarial_loss_weight
-    pix_loss = pixel_loss(fake_images, real_images) * pixel_loss_weight
-    per_loss = perceptual_loss(inception, fake_images, real_images) * perceptual_loss_weight
-    
-    g_loss = adv_loss + pix_loss + per_loss
+    # Предсказания дискриминатора для фейковых изображений
+    fake_outputs, _ = discriminator(fake_images, labels)
 
-    # Накопление градиентов
+    # Расчет функций потерь для генератора
+    g_hinge_loss = g_loss_fn(fake_outputs) * g_loss_weight
+    g_pixel_loss = pixel_loss(fake_images, real_images) * pixel_loss_weight
+    g_percep_loss = perceptual_loss(inception, fake_images, real_images) * perceptual_loss_weight
+
+    g_loss = g_hinge_loss + g_pixel_loss + g_percep_loss
+
+    # Gradient accumulation
     g_loss = g_loss / accumulation_steps
     g_loss.backward()
 
     return g_loss.item()
-
 
 ################################################################
 # //////////////////////////////////////////////////////////// #
@@ -128,12 +133,15 @@ def validate(generator,
              val_loader, 
              epoch, 
              img_dir,
-             adversarial_loss,
+             g_loss_fn,
+             d_loss_fn,
              pixel_loss,
              classification_loss,
-             adversarial_loss_weight,
+             perceptual_loss,
+             g_loss_weight,
              pixel_loss_weight,
              classification_loss_weight,
+             perceptual_loss_weight,
              num_classes,
              device
              ):
@@ -147,12 +155,15 @@ def validate(generator,
     - val_loader: Загрузчик данных для валидации.
     - epoch: Текущая эпоха обучения.
     - img_dir: Директория для сохранения сгенерированных изображений.
-    - adversarial_loss: Функция потерь для дискриминатора (обычно BCELoss).
+    - g_loss_fn: Функция потерь для генератора (обычно HingeLoss).
+    - d_loss_fn: Функция потерь для дискриминатора (обычно HingeLoss).
     - pixel_loss: Функция потерь для сравнения пиксельных значений (обычно L1Loss или MSELoss).
     - classification_loss: Функция потерь для классификации (обычно CrossEntropyLoss).
-    - adversarial_loss_weight: Вес для потерь дискриминатора.
+    - perceptual_loss: Функция перцептивных потерь.
+    - g_loss_weight: Вес для потерь генератора.
     - pixel_loss_weight: Вес для потерь пиксельных значений.
     - classification_loss_weight: Вес для потерь классификации.
+    - perceptual_loss_weight: Вес для потерь перцептивных значений.
     - num_classes: Количество классов в датасете.
     - device: Устройство (GPU/CPU), на котором происходит обучение.
 
@@ -160,6 +171,8 @@ def validate(generator,
     - val_g_loss: Среднее значение потерь генератора на валидационном наборе данных.
     - val_d_loss: Среднее значение потерь дискриминатора на валидационном наборе данных.
     - fid: Значение FID между реальными и сгенерированными изображениями.
+    - real_acc: Средняя точность для реальных изображений.
+    - fake_acc: Средняя точность для поддельных изображений.
     """
     
     # Переключение моделей в режим оценки
@@ -168,52 +181,64 @@ def validate(generator,
     
     real_fid = []
     fake_fid = []
-    
     fid_amount = 30
 
     val_g_loss = 0
     val_d_loss = 0
+    real_acc = 0
+    fake_acc = 0
     
     with torch.no_grad():
         for real_images, labels in val_loader:
             real_images = real_images.to(device)
             labels = labels.to(device)
 
-            # Генерация шума и эмбеддингов классов для создания поддельных изображений
+            # Генерация поддельных изображений
             noise, class_embeds = get_latent_input(real_images.size(0), labels, num_classes, device)
             fake_images = generator(noise, class_embeds, truncation=0.2)
 
-            # Вычисление потерь для реальных изображений
-            real_binar_output, real_class_output  = discriminator(real_images, labels)
-            fake_binar_output, _ = discriminator(fake_images, labels)
+            # Получение предсказаний дискриминатора для реальных и поддельных изображений
+            real_outputs, real_class_outputs  = discriminator(real_images, labels)
+            fake_outputs, _ = discriminator(fake_images.detach(), labels)
 
-            real_loss = adversarial_loss(real_binar_output, torch.ones_like(real_binar_output))
-            fake_loss = adversarial_loss(fake_binar_output, torch.zeros_like(fake_binar_output))
-            
-            class_loss = classification_loss(real_class_output, labels)
+            # Hinge loss для реальных и поддельных изображений
+            d_hinge_loss = d_loss_fn(real_outputs, fake_outputs)
 
-            # Среднее значение потерь для реальных и поддельных изображений
-            d_loss = (real_loss + fake_loss) / 2 + (class_loss * classification_loss_weight)
+            # Потери классификации для реальных изображений
+            d_class_loss = classification_loss(real_class_outputs, labels) * classification_loss_weight
+
+            # Общие потери дискриминатора
+            d_loss = d_hinge_loss + d_class_loss
             val_d_loss += d_loss.item()
 
-            # Вычисление потерь для генератора
-            g_loss = (adversarial_loss(fake_binar_output, torch.ones_like(fake_binar_output)) * adversarial_loss_weight) + (pixel_loss(fake_images, real_images) * pixel_loss_weight)
+            # Расчет функций потерь для генератора
+            g_hinge_loss = g_loss_fn(fake_outputs) * g_loss_weight
+            g_pixel_loss = pixel_loss(fake_images, real_images) * pixel_loss_weight
+            g_percep_loss = perceptual_loss(inception, fake_images, real_images) * perceptual_loss_weight
+            
+            g_loss = g_hinge_loss + g_pixel_loss + g_percep_loss
             val_g_loss += g_loss.item()
             
             if len(real_fid) < fid_amount:
                 real_fid.append(real_images)
                 fake_fid.append(fake_images)
+                
+            # Подсчет точности для реальных и фейковых изображений
+            real_acc += (real_outputs > 0).float().mean()
+            fake_acc += (fake_outputs < 0).float().mean()
 
         # Сохранение сгенерированных изображений
-        save_sample_images(fake_images, epoch, "validation", "End", img_dir)
-            
+        save_sample_images(fake_images, epoch, "validation", "end", img_dir)
+
+    # Рассчитываем FID
     real_fid_tensor = torch.cat(real_fid, dim=0)
     fake_fid_tensor = torch.cat(fake_fid, dim=0)
- 
     fid = calculate_fid(real_fid_tensor, fake_fid_tensor, inception, device)
 
-    # Вычисление средних значений потерь
+    # Средние значения потерь и точности
     val_g_loss /= len(val_loader)
     val_d_loss /= len(val_loader)
+    real_acc /= len(val_loader)
+    fake_acc /= len(val_loader)
 
-    return val_g_loss, val_d_loss, fid
+    return val_g_loss, val_d_loss, fid, real_acc, fake_acc

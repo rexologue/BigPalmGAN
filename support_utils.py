@@ -37,12 +37,12 @@ def save_sample_images(images, epoch, phase, batch_idx, save_dir):
 ################################################################
 # //////////////////////////////////////////////////////////// #
 ################################################################
-def print_stats(epoch, batch_idx, g_loss, d_loss, val_g_loss=None, val_d_loss=None, fid=None):
+def print_stats(epoch, batch_idx, g_loss, d_loss, real_acc, fake_acc, val_g_loss=None, val_d_loss=None, fid=None):
     print(f"\nEpoch [{epoch}], Batch [{batch_idx}]")
-    print(f"Training - G Loss: {g_loss:.4f}, D Loss: {d_loss:.4f}")
+    print(f"Training - G Loss: {g_loss:.4f}, D Loss: {d_loss:.4f}, Real Accuracy: {real_acc:.4f}, Fake Accuracy: {fake_acc:.4f}")
     
     if val_g_loss is not None and val_d_loss is not None and fid is not None:
-        print(f"Validation - G Loss: {val_g_loss:.4f}, D Loss: {val_d_loss:.4f}, FID: {fid:.4f}")
+        print(f"Validation - G Loss: {val_g_loss:.4f}, D Loss: {val_d_loss:.4f}, FID: {fid:.4f}, Real Accuracy: {real_acc:.4f}, Fake Accuracy: {fake_acc:.4f}")
         
     print('\n')
 
@@ -82,3 +82,14 @@ def create_unique_directory(base_name):
 
     os.makedirs(dir_name)
     return dir_name
+
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1', 'True'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0', 'False'):
+        return False
