@@ -92,10 +92,8 @@ def train(epochs,
             fake_acc_accum += fake_acc
 
             # Обучение генератора с накоплением градиентов
-            g_loss = 0
-            for _ in range(accumulation_steps):
-                g_loss += train_generator(generator, discriminator, real_images, labels, inception, g_loss_fn, pixel_loss, perceptual_loss,
-                                          g_loss_weight, pixel_loss_weight, perceptual_loss_weight, accumulation_steps, num_classes, device)
+            g_loss = train_generator(generator, discriminator, real_images, labels, inception, g_loss_fn, pixel_loss, perceptual_loss,
+                                      g_loss_weight, pixel_loss_weight, perceptual_loss_weight, accumulation_steps, num_classes, device)
 
             g_loss_accum += g_loss
 
@@ -110,14 +108,9 @@ def train(epochs,
                     noise, class_embeds = su.get_latent_input(real_images.size(0), labels, num_classes, device)
                     fake_images = generator(noise, class_embeds, truncation=0.2)
                     su.save_sample_images(fake_images, epoch, "train", batch_idx, img_dir)
-                    
-                cur_g_loss = g_loss_accum / (batch_idx + 1)
-                cur_d_loss = d_loss_accum / (batch_idx + 1)
-                cur_real_acc = real_acc_accum / (batch_idx + 1)
-                cur_fake_acc = fake_acc_accum / (batch_idx + 1)
 
                 # Вывод статистики каждые print_every_n_batches батчей
-                su.print_stats(epoch, batch_idx, cur_g_loss, cur_d_loss, cur_real_acc, cur_fake_acc)
+                su.print_stats(epoch, batch_idx, g_loss, d_loss, real_acc, fake_acc)
 
             # Очистка кеша
             su.clear_cache()

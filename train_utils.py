@@ -122,7 +122,7 @@ def train_generator(generator,
     g_loss = g_loss / accumulation_steps
     g_loss.backward()
 
-    return g_loss.item()
+    return g_hinge_loss.item() + g_pixel_loss.item() + g_percep_loss.item()
 
 ################################################################
 # //////////////////////////////////////////////////////////// #
