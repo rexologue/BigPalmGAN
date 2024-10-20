@@ -48,8 +48,8 @@ if __name__ == '__main__':
     d_opt_ckp = checkpoint.get('optimizer_D_state_dict', None)
     ckp_start_epoch = checkpoint.get('epoch', None)
         
-    generator = setup_generator(args.num_classes, args.unfreeze_last_n, checkpoint)
-    discriminator = setup_discriminator(args.num_classes, checkpoint)
+    generator = setup_generator(args.num_classes, args.unfreeze_last_n, g_ckp)
+    discriminator = setup_discriminator(args.num_classes, d_ckp)
     inception = setup_inception(args.inception)
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
