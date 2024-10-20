@@ -72,7 +72,7 @@ def load_generator(num_classes, ckp):
 ################################################################
 def setup_generator(num_classes, unfreeze_last_n, ckp=None):
     """
-    Настраивает генератор, загружая его состояние из чекпоинта или используя предобученную модель.
+    Настраивает генератор, загружая его состояние из чекпоинта или используя новую модель.
 
     Параметры:
     - num_classes:     Количество классов
@@ -80,15 +80,15 @@ def setup_generator(num_classes, unfreeze_last_n, ckp=None):
     - ckp:             Путь к файлу чекпоинта или словарь состояния генератора (опционально).
 
     Возвращает:
-    - generator: Экземпляр генератора BigGAN с загруженным или предобученным состоянием.
+    - generator: Экземпляр генератора BigGAN с загруженным или новым состоянием.
     """
     
     # Если чекпоинт предоставлен, загружаем состояние генератора из него
     if ckp is not None:
-        generator = load_generator(num_classes, ckp['generator_state_dict'])
+        generator = load_generator(num_classes, ckp)
     else:
-        # Иначе используем предобученную модель BigGAN
-        generator = BigGAN.from_pretrained('biggan-deep-512')
+        # Иначе используем новую модель BigGAN
+        generator = instance_generator(num_classes)
         
     # Замораживаем большинство слоев генератора, кроме слоев генератора
     freeze_generator(generator, unfreeze_last_n)
@@ -150,7 +150,7 @@ def setup_discriminator(num_classes, ckp=None):
     discriminator.apply(initialize_weights)
     
     if ckp is not None:
-        discriminator.load_state_dict(ckp['discriminator_state_dict'])
+        discriminator.load_state_dict(ckp)
     
     return discriminator
 

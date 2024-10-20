@@ -40,7 +40,13 @@ if __name__ == '__main__':
     if args.ckp is not None:
         checkpoint = torch.load(args.ckp)
     else:
-        checkpoint = None
+        checkpoint = dict()
+        
+    g_ckp = checkpoint.get('generator_state_dict', None)
+    d_ckp = checkpoint.get('discriminator_state_dict', None)
+    g_opt_ckp = checkpoint.get('optimizer_G_state_dict', None)
+    d_opt_ckp = checkpoint.get('optimizer_D_state_dict', None)
+    ckp_start_epoch = checkpoint.get('epoch', None)
         
     generator = setup_generator(args.num_classes, args.unfreeze_last_n, checkpoint)
     discriminator = setup_discriminator(args.num_classes, checkpoint)
@@ -55,11 +61,10 @@ if __name__ == '__main__':
     optimizer_G = torch.optim.AdamW(filter(lambda p: p.requires_grad, generator.parameters()), lr=args.lr_g, betas=(0.5, 0.999), weight_decay=args.weight_decay)
     optimizer_D = torch.optim.AdamW(discriminator.parameters(), lr=args.lr_d, betas=(0.5, 0.999), weight_decay=args.weight_decay)   
         
-    if args.ckp is not None:
-        if checkpoint['optimizer_G_state_dict'] is not None: 
-            optimizer_G.load_state_dict(checkpoint['optimizer_G_state_dict'])
-        if checkpoint['optimizer_G_state_dict'] is not None:    
-            optimizer_D.load_state_dict(checkpoint['optimizer_D_state_dict'])
+    if g_opt_ckp is not None:
+        optimizer_G.load_state_dict(g_opt_ckp)
+    if d_opt_ckp is not None:    
+        optimizer_D.load_state_dict(d_opt_ckp)
         
     train_loader = setup_loader(args.train_dir, args.batch_size, args.use_augs)
     eval_loader = setup_loader(args.eval_dir, args.batch_size, args.use_augs, train_phase=False)
@@ -78,7 +83,7 @@ if __name__ == '__main__':
     img_dir = os.path.join(run_dir, 'images')
     os.makedirs(img_dir, exist_ok=True)
     
-    start_epoch = -1 if checkpoint is None else checkpoint['epoch']
+    start_epoch = -1 if ckp_start_epoch is None else ckp_start_epoch
     
     train(
         epochs=args.epochs,
