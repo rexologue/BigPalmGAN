@@ -23,6 +23,7 @@ def train(epochs,
           classification_loss_weight,
           perceptual_loss_weight,
           accumulation_steps,
+          lambda_gp,
           print_every_n_batches,
           num_classes,
           img_dir,
@@ -85,7 +86,7 @@ def train(epochs,
 
             # Обучение дискриминатора
             d_loss, real_acc, fake_acc = train_discriminator(generator, discriminator, real_images, labels, d_loss_fn, classification_loss, 
-                                                             classification_loss_weight, optimizer_D, num_classes, device)
+                                                             classification_loss_weight, optimizer_D, lambda_gp, num_classes, device)
             
             d_loss_accum += d_loss
             real_acc_accum += real_acc

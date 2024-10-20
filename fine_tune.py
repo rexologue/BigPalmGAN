@@ -25,6 +25,7 @@ if __name__ == '__main__':
     parser.add_argument('--classification_loss_weight', type=float, required=True, help='Classification loss weight')
     parser.add_argument('--perceptual_loss_weight', type=float, required=True, help='Perceptual loss weight')
     parser.add_argument('--accumulation_steps', type=int, required=True, help='Steps for gradient accumulation')
+    parser.add_argument('--lambda_gp', type=float, required=True, help='Lambda coefficient of gradient penalty')
     parser.add_argument('--unfreeze_last_n', type=int, required=True, help='How much last generator layers to unfreeze')
     parser.add_argument('--use_augs', type=str2bool, nargs='?', const=True, default=False, help='Use augmentations or not')
     parser.add_argument('--train_dir', type=str, required=True, help='Path to train directory')
@@ -105,6 +106,7 @@ if __name__ == '__main__':
         classification_loss_weight=args.classification_loss_weight,
         perceptual_loss_weight=args.perceptual_loss_weight,
         accumulation_steps=args.accumulation_steps,
+        lambda_gp=args.lambda_gp,
         print_every_n_batches=args.print_every_n_batches,
         num_classes=args.num_classes,
         img_dir=img_dir,

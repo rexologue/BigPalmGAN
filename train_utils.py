@@ -5,6 +5,35 @@ from fid.fid_score import calculate_fid
 ################################################################
 # //////////////////////////////////////////////////////////// #
 ################################################################
+def compute_gradient_penalty(discriminator, real_images, fake_images, labels, device):
+    # Random weight for interpolation
+    alpha = torch.rand(real_images.size(0), 1, 1, 1, device=device)
+    
+    # Interpolation between real and fake images
+    interpolates = (alpha * real_images + (1 - alpha) * fake_images).requires_grad_(True)
+    
+    # Discriminator's output for interpolated images
+    d_interpolates, _ = discriminator(interpolates, labels)
+    
+    # Gradients of d_interpolates with respect to interpolated images
+    gradients = torch.autograd.grad(
+        outputs=d_interpolates,
+        inputs=interpolates,
+        grad_outputs=torch.ones_like(d_interpolates, device=device),
+        create_graph=True,
+        retain_graph=True,
+        only_inputs=True
+    )[0]
+    
+    # Compute gradient penalty
+    gradients = gradients.view(gradients.size(0), -1)
+    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
+    
+    return gradient_penalty
+
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def train_discriminator(generator, 
                         discriminator, 
                         real_images, 
@@ -13,6 +42,7 @@ def train_discriminator(generator,
                         classification_loss,
                         classification_loss_weight,
                         optimizer_D,
+                        lambda_gp,
                         num_classes,
                         device
                         ):
@@ -28,6 +58,7 @@ def train_discriminator(generator,
     - classification_loss: Функция потерь для классификации (обычно CrossEntropyLoss).
     - classification_loss_weight: Вес для потерь классификации.
     - optimizer_D: Оптимизатор для дискриминатора.
+    - lambda_gp: Значение коэффициента gradient penalty
     - num_classes: Количество классов в датасете.
     - device: Устройство (GPU/CPU), на котором происходит обучение.
 
@@ -51,7 +82,11 @@ def train_discriminator(generator,
     # Классификационные потери для реальных изображений
     d_class_loss = classification_loss(real_class_outputs, labels) * classification_loss_weight
     
-    d_loss = d_hinge_loss + d_class_loss
+    # Вычисляем Gradient Penalty
+    gradient_penalty = compute_gradient_penalty(discriminator, real_images, fake_images, labels, device)
+    
+    # Итоговые потери дискриминатора с Gradient Penalty
+    d_loss = d_hinge_loss + d_class_loss + lambda_gp * gradient_penalty
 
     # Обновление весов дискриминатора
     optimizer_D.zero_grad()
@@ -198,7 +233,7 @@ def validate(generator,
             fake_images = generator(noise, class_embeds, truncation=0.2)
 
             # Получение предсказаний дискриминатора для реальных и поддельных изображений
-            real_outputs, real_class_outputs  = discriminator(real_images, labels)
+            real_outputs, real_class_outputs = discriminator(real_images, labels)
             fake_outputs, _ = discriminator(fake_images.detach(), labels)
 
             # Hinge loss для реальных и поддельных изображений
