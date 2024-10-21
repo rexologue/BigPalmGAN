@@ -78,6 +78,11 @@ def train(epochs,
         d_loss_accum = 0
         real_acc_accum = 0
         fake_acc_accum = 0
+        
+        accums = 0
+        
+        g_loss_epoch = 0
+        d_loss_epoch = 0
 
         # Обучение на каждом батче данных
         for batch_idx, (real_images, labels) in enumerate(tqdm(train_loader, desc=f"Epoch {epoch} Training", ncols=100)):
@@ -97,6 +102,8 @@ def train(epochs,
                                       g_loss_weight, pixel_loss_weight, perceptual_loss_weight, accumulation_steps, num_classes, device)
 
             g_loss_accum += g_loss
+            
+            accums += 1
 
             # Обновление весов генератора после накопления градиентов
             if (batch_idx + 1) % accumulation_steps == 0:
@@ -109,9 +116,23 @@ def train(epochs,
                     noise, class_embeds = su.get_latent_input(real_images.size(0), labels, num_classes, device)
                     fake_images = generator(noise, class_embeds, truncation=0.2)
                     su.save_sample_images(fake_images, epoch, "train", batch_idx, img_dir)
+                    
+                cur_g_loss = g_loss_accum / accums
+                cur_d_loss = d_loss_accum / accums
+                cur_real_acc = real_acc_accum / accums
+                cur_fake_acc = fake_acc_accum / accums
+                
+                g_loss_epoch += g_loss_accum
+                d_loss_epoch += d_loss_accum
+                
+                g_loss_accum = 0
+                d_loss_accum = 0
+                real_acc_accum = 0
+                fake_acc_accum = 0
+                accums = 0
 
                 # Вывод статистики каждые print_every_n_batches батчей
-                su.print_stats(epoch, batch_idx, g_loss, d_loss, real_acc, fake_acc)
+                su.print_stats(epoch, batch_idx, cur_g_loss, cur_d_loss, cur_real_acc, cur_fake_acc)
 
             # Очистка кеша
             su.clear_cache()
@@ -121,7 +142,7 @@ def train(epochs,
                                                                            pixel_loss, classification_loss, perceptual_loss, g_loss_weight, pixel_loss_weight, 
                                                                            classification_loss_weight, perceptual_loss_weight, num_classes, device)
         
-        su.print_stats(epoch, 'end', g_loss_accum / len(train_loader), d_loss_accum / len(train_loader), val_real_acc, val_fake_acc, val_g_loss, val_d_loss, fid)
+        su.print_stats(epoch, 'end', g_loss_epoch / len(train_loader), d_loss_epoch / len(train_loader), val_real_acc, val_fake_acc, val_g_loss, val_d_loss, fid)
 
         # Обновление планировщиков скорости обучения
         scheduler_G.step()
