@@ -34,6 +34,7 @@ if __name__ == '__main__':
     parser.add_argument('--output_dir', type=str, required=True, help='Output dir')
     parser.add_argument('--inception', type=str, required=True, help='Path to the inception model')
     parser.add_argument('--ckp', type=str, required=False, default=None, help='Path to checkpoint')
+    parser.add_argument('--only_g_ckp', type=str, required=False, default=None, help='Path to checkpoint, where saved only generator weights')
 
     # Парсинг аргументов
     args = parser.parse_args()
@@ -43,7 +44,11 @@ if __name__ == '__main__':
     else:
         checkpoint = dict()
         
-    g_ckp = checkpoint.get('generator_state_dict', None)
+    if args.only_g_ckp is not None:
+        g_ckp = torch.load(args.only_g_ckp)
+    else:    
+        g_ckp = checkpoint.get('generator_state_dict', None)
+        
     d_ckp = checkpoint.get('discriminator_state_dict', None)
     g_opt_ckp = checkpoint.get('optimizer_G_state_dict', None)
     d_opt_ckp = checkpoint.get('optimizer_D_state_dict', None)
