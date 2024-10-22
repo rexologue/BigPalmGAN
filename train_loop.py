@@ -59,7 +59,7 @@ def train(epochs,
 
             # Train discriminator
             d_loss, real_acc, fake_acc = train_discriminator(
-                generator, discriminator, real_images, labels, d_loss_fn, optimizer_D, lambda_gp, num_classes, device)
+                generator, discriminator, real_images, labels, d_loss_fn, optimizer_D, lambda_gp, device)
 
             d_loss_accum += d_loss
             real_acc_accum += real_acc
@@ -68,7 +68,7 @@ def train(epochs,
             # Train generator with gradient accumulation
             g_loss = train_generator(
                 generator, discriminator, real_images, labels, inception, g_loss_fn, pixel_loss, perceptual_loss,
-                g_loss_weight, pixel_loss_weight, perceptual_loss_weight, accumulation_steps, num_classes, device)
+                g_loss_weight, pixel_loss_weight, perceptual_loss_weight, accumulation_steps, device)
 
             g_loss_accum += g_loss
 
@@ -82,7 +82,7 @@ def train(epochs,
             # Save sample images
             if batch_idx % print_every_n_batches == 0 and batch_idx != 0:
                 with torch.no_grad():
-                    noise, labels = su.get_latent_input(real_images.size(0), labels, num_classes, device)
+                    noise, labels = su.get_latent_input(real_images.size(0), labels, device)
                     fake_images = generator(noise, labels, truncation=0.4)
                     su.save_sample_images(fake_images, epoch, "train", batch_idx, img_dir)
 

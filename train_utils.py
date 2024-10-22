@@ -36,11 +36,10 @@ def train_discriminator(generator,
                         d_loss_fn,
                         optimizer_D,
                         lambda_gp,
-                        num_classes,
                         device):
     
     # Generate fake images
-    noise, labels = get_latent_input(real_images.size(0), labels, num_classes, device)
+    noise, labels = get_latent_input(real_images.size(0), labels, device)
     fake_images = generator(noise, labels, truncation=0.4)
 
     # Get discriminator outputs
@@ -81,11 +80,10 @@ def train_generator(generator,
                     pixel_loss_weight,
                     perceptual_loss_weight,
                     accumulation_steps,
-                    num_classes,
                     device):
     
     # Generate fake images
-    noise, labels = get_latent_input(real_images.size(0), labels, num_classes, device)
+    noise, labels = get_latent_input(real_images.size(0), labels, device)
     fake_images = generator(noise, labels, truncation=0.4)
 
     # Get discriminator outputs
@@ -149,7 +147,7 @@ def validate(generator,
 
             # Generate fake images
             batch_size = real_images.size(0)
-            noise, labels = get_latent_input(batch_size, labels, num_classes, device)
+            noise, labels = get_latent_input(batch_size, labels, device)
             fake_images = generator(noise, labels, truncation=0.4)
 
             # Get discriminator outputs

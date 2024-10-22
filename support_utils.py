@@ -9,18 +9,10 @@ import matplotlib.pyplot as plt
 ################################################################
 # //////////////////////////////////////////////////////////// #
 ################################################################
-def get_latent_input(batch_size, label, num_classes, device='cpu'):
-    noise = truncated_noise_sample(truncation=0.2, batch_size=batch_size)
-    noise = torch.tensor(noise).float().to(device)
-
-    label_one_hot = np.zeros((batch_size, num_classes), dtype=np.float32)
-    
-    for i, j in enumerate(label):
-        label_one_hot[i, j] = 1.0
-        
-    label_one_hot = torch.tensor(label_one_hot).float().to(device)
-
-    return noise, label_one_hot
+def get_latent_input(batch_size, labels, device='cpu'):
+    noise = truncated_noise_sample(truncation=0.2, batch_size=batch_size).to(device)
+    labels = labels.to(device).long()
+    return noise, labels    
 
 ################################################################
 # //////////////////////////////////////////////////////////// #
