@@ -238,64 +238,125 @@ class GenBlock(nn.Module):
         if self.drop_channels:
             new_channels = x0.shape[1] // 2
             x0 = x0[:, :new_channels, ...]
-            
+
         if self.up_sample:
             x0 = F.interpolate(x0, scale_factor=2, mode='nearest')
 
         out = x + x0
-        
         return out
 
 class Generator(nn.Module):
     def __init__(self, config):
         super(Generator, self).__init__()
         self.config = config
-        ch = config.channel_width
+        ch = config.channel_width  # Base channel width
         condition_vector_dim = config.z_dim * 2
 
+        # Adjust 'gen_z' to match the old model's output features
         self.gen_z = snlinear(in_features=condition_vector_dim,
                               out_features=4 * 4 * 16 * ch, eps=config.eps)
 
         layers = []
-        for i, layer in enumerate(config.layers):
-            if i == config.attention_layer_position:
-                layers.append(SelfAttn(ch*layer[1], eps=config.eps))
-                
-            layers.append(GenBlock(ch*layer[1],
-                                   ch*layer[2],
-                                   condition_vector_dim,
-                                   up_sample=layer[0],
-                                   eps=config.eps))
-            
+        # Layer 0-2: 3 x GenBlock (2048 -> 2048)
+        for _ in range(3):
+            layers.append(GenBlock(
+                in_size=16 * ch,
+                out_size=16 * ch,
+                condition_vector_dim=condition_vector_dim,
+                up_sample=False,
+                eps=config.eps
+            ))
+        # Layer 3: GenBlock (2048 -> 1024)
+        layers.append(GenBlock(
+            in_size=16 * ch,
+            out_size=8 * ch,
+            condition_vector_dim=condition_vector_dim,
+            up_sample=False,
+            eps=config.eps
+        ))
+        # Layer 4-6: 3 x GenBlock (1024 -> 1024)
+        for _ in range(3):
+            layers.append(GenBlock(
+                in_size=8 * ch,
+                out_size=8 * ch,
+                condition_vector_dim=condition_vector_dim,
+                up_sample=False,
+                eps=config.eps
+            ))
+        # Layer 7: GenBlock (1024 -> 512)
+        layers.append(GenBlock(
+            in_size=8 * ch,
+            out_size=4 * ch,
+            condition_vector_dim=condition_vector_dim,
+            up_sample=False,
+            eps=config.eps
+        ))
+        # Layer 8: SelfAttn
+        layers.append(SelfAttn(4 * ch, eps=config.eps))
+        # Layer 9: GenBlock (512 -> 512)
+        layers.append(GenBlock(
+            in_size=4 * ch,
+            out_size=4 * ch,
+            condition_vector_dim=condition_vector_dim,
+            up_sample=False,
+            eps=config.eps
+        ))
+        # Layer 10: GenBlock (512 -> 256)
+        layers.append(GenBlock(
+            in_size=4 * ch,
+            out_size=2 * ch,
+            condition_vector_dim=condition_vector_dim,
+            up_sample=False,
+            eps=config.eps
+        ))
+        # Layer 11: GenBlock (256 -> 128)
+        layers.append(GenBlock(
+            in_size=2 * ch,
+            out_size=ch,
+            condition_vector_dim=condition_vector_dim,
+            up_sample=False,
+            eps=config.eps
+        ))
+        # Layer 12: GenBlock (128 -> 128)
+        layers.append(GenBlock(
+            in_size=ch,
+            out_size=ch,
+            condition_vector_dim=condition_vector_dim,
+            up_sample=False,
+            eps=config.eps
+        ))
+        # Layer 13-14: 2 x GenBlock (128 -> 128)
+        for _ in range(2):
+            layers.append(GenBlock(
+                in_size=ch,
+                out_size=ch,
+                condition_vector_dim=condition_vector_dim,
+                up_sample=False,
+                eps=config.eps
+            ))
+
         self.layers = nn.ModuleList(layers)
 
+        # Adjust 'conv_to_rgb' to match old model's output channels
         self.bn = BigGANBatchNorm(ch, eps=config.eps, conditional=False)
         self.relu = nn.ReLU()
-        self.conv_to_rgb = snconv2d(in_channels=ch, out_channels=ch, kernel_size=3, padding=1, eps=config.eps)
+        self.conv_to_rgb = snconv2d(in_channels=ch, out_channels=128, kernel_size=3, padding=1, eps=config.eps)
         self.tanh = nn.Tanh()
 
-    def forward(self, cond_vector, truncation):
+    def forward(self, cond_vector):
         z = self.gen_z(cond_vector)
-
-        # We use this conversion step to be able to use TF weights:
-        # TF convention on shape is [batch, height, width, channels]
-        # PT convention on shape is [batch, channels, height, width]
         z = z.view(-1, 4, 4, 16 * self.config.channel_width)
         z = z.permute(0, 3, 1, 2).contiguous()
 
-        for i, layer in enumerate(self.layers):
-            if isinstance(layer, GenBlock):
-                z = layer(z, cond_vector, truncation)
-            else:
-                z = layer(z)
+        for layer in self.layers:
+            z = layer(z, cond_vector)
 
-        z = self.bn(z, truncation)
+        z = self.bn(z)
         z = self.relu(z)
         z = self.conv_to_rgb(z)
-        z = z[:, :3, ...]
         z = self.tanh(z)
-        
         return z
+
 
 class BigGAN(nn.Module):
     """BigGAN Generator."""
