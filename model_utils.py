@@ -27,7 +27,7 @@ def instance_generator(num_classes):
                         [False, 1, 1],
                         [True, 1, 1]],
             "n_stats": 51,
-            "num_classes": 1000,
+            "num_classes": num_classes,
             "output_dim": 512,
             "z_dim": 128
             }
