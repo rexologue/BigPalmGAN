@@ -6,55 +6,42 @@ import torch.nn.functional as F
 from scipy.stats import truncnorm
 
 class BigGANConfig(object):
-    """Configuration for BigGAN."""
     def __init__(self,
-                 output_dim=512,
+                 output_dim=128,
                  z_dim=128,
                  class_embed_dim=128,
                  channel_width=128,
                  num_classes=1000,
-                 layers=None,
+                 layers=[(False, 16, 16),
+                         (True, 16, 16),
+                         (False, 16, 16),
+                         (True, 16, 8),
+                         (False, 8, 8),
+                         (True, 8, 4),
+                         (False, 4, 4),
+                         (True, 4, 2),
+                         (False, 2, 2),
+                         (True, 2, 1)],
                  attention_layer_position=8,
                  eps=1e-4,
                  n_stats=51):
-        
+        """Constructs BigGANConfig. """
         self.output_dim = output_dim
         self.z_dim = z_dim
         self.class_embed_dim = class_embed_dim
         self.channel_width = channel_width
         self.num_classes = num_classes
-        
-        if layers is None:
-            # Layers for 512x512 output
-            # Each tuple: (up_sample, in_channels, out_channels)
-            self.layers = [
-                (False, 16, 16),  # 4x4
-                (True, 16, 16),   # 8x8
-                (False, 16, 16),  # 8x8
-                (True, 16, 16),   # 16x16
-                (False, 16, 16),  # 16x16
-                (True, 16, 8),    # 32x32
-                (False, 8, 8),    # 32x32
-                (True, 8, 4),     # 64x64
-                (False, 4, 4),    # 64x64
-                (True, 4, 2),     # 128x128
-                (False, 2, 2),    # 128x128
-                (True, 2, 1),     # 256x256
-                (False, 1, 1),    # 256x256
-                (True, 1, 1)      # 512x512
-            ]
-        else:
-            self.layers = layers
-            
+        self.layers = layers
         self.attention_layer_position = attention_layer_position
         self.eps = eps
         self.n_stats = n_stats
 
     @classmethod
     def from_dict(cls, json_object):
+        """Constructs a `BigGANConfig` from a Python dictionary of parameters."""
         config = BigGANConfig()
         for key, value in json_object.items():
-            setattr(config, key, value)
+            config.__dict__[key] = value
         return config
 
 def snconv2d(eps=1e-12, **kwargs):
