@@ -1,19 +1,17 @@
 import argparse
 import os
 import torch
-
 from train_loop import train
 from model_utils import setup_generator, setup_discriminator
-from data import setup_loader 
+from data import setup_loader
 from support_utils import create_unique_directory, str2bool
 from fid.inception import setup_inception
 from losses import InceptionPerceptualLoss, DiscriminatorHingeLoss, GeneratorHingeLoss
 
 if __name__ == '__main__':
-    # Создание парсера аргументов
+    # Argument parser setup
     parser = argparse.ArgumentParser(description="Setup parameters for BigGAN fine-tuning")
-
-    # Добавление аргументов
+    
     parser.add_argument('--epochs', type=int, required=True, help='Num of epochs for fine-tuning')
     parser.add_argument('--num_classes', type=int, required=True, help='Amount of classes')
     parser.add_argument('--lr_g', type=float, required=True, help='Generator learning rate')
@@ -36,62 +34,63 @@ if __name__ == '__main__':
     parser.add_argument('--inception', type=str, required=True, help='Path to the inception model')
     parser.add_argument('--ckp', type=str, required=False, default=None, help='Path to checkpoint')
     parser.add_argument('--only_g_ckp', type=str, required=False, default=None, help='Path to checkpoint, where saved only generator weights')
-
-    # Парсинг аргументов
-    args = parser.parse_args()
     
+    args = parser.parse_args()
+
     if args.ckp is not None:
         checkpoint = torch.load(args.ckp)
     else:
         checkpoint = dict()
-        
+
     if args.only_g_ckp is not None:
         g_ckp = torch.load(args.only_g_ckp)
-    else:    
+    else:
         g_ckp = checkpoint.get('generator_state_dict', None)
-        
+
     d_ckp = checkpoint.get('discriminator_state_dict', None)
     g_opt_ckp = checkpoint.get('optimizer_G_state_dict', None)
     d_opt_ckp = checkpoint.get('optimizer_D_state_dict', None)
     ckp_start_epoch = checkpoint.get('epoch', None)
-        
+
     generator = setup_generator(args.num_classes, args.unfreeze_last_n, g_ckp)
     discriminator = setup_discriminator(args.num_classes, d_ckp)
     inception = setup_inception(args.inception)
-    
+
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    
+
     generator.to(device)
     discriminator.to(device)
     inception.to(device)
-        
-    optimizer_G = torch.optim.AdamW(filter(lambda p: p.requires_grad, generator.parameters()), lr=args.lr_g, betas=(0.5, 0.999), weight_decay=args.weight_decay_g)
-    optimizer_D = torch.optim.AdamW(discriminator.parameters(), lr=args.lr_d, betas=(0.5, 0.999), weight_decay=args.weight_decay_d)   
-        
+
+    optimizer_G = torch.optim.AdamW(filter(lambda p: p.requires_grad, generator.parameters()),
+                                    lr=args.lr_g, betas=(0.5, 0.999), weight_decay=args.weight_decay_g)
+    optimizer_D = torch.optim.AdamW(discriminator.parameters(),
+                                    lr=args.lr_d, betas=(0.5, 0.999), weight_decay=args.weight_decay_d)
+
     if g_opt_ckp is not None:
         optimizer_G.load_state_dict(g_opt_ckp)
-    if d_opt_ckp is not None:    
+    if d_opt_ckp is not None:
         optimizer_D.load_state_dict(d_opt_ckp)
-        
+
     train_loader = setup_loader(args.train_dir, args.batch_size, args.use_augs)
     eval_loader = setup_loader(args.eval_dir, args.batch_size, args.use_augs, train_phase=False)
-    
+
     g_loss_fn = GeneratorHingeLoss()
     d_loss_fn = DiscriminatorHingeLoss()
     pixel_loss = torch.nn.MSELoss()
     classification_loss = torch.nn.CrossEntropyLoss()
     perceptual_loss = InceptionPerceptualLoss()
-    
+
     run_dir = create_unique_directory(os.path.join(args.output_dir, 'biggan_fine_tune_run'))
-    
+
     w_dir = os.path.join(run_dir, 'weights')
     os.makedirs(w_dir, exist_ok=True)
 
     img_dir = os.path.join(run_dir, 'images')
     os.makedirs(img_dir, exist_ok=True)
-    
+
     start_epoch = -1 if ckp_start_epoch is None else ckp_start_epoch
-    
+
     train(
         epochs=args.epochs,
         start_epoch=start_epoch,

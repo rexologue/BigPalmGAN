@@ -27,11 +27,59 @@ def get_latent_input(batch_size, label, num_classes, device='cpu'):
 ################################################################
 def save_sample_images(images, epoch, phase, batch_idx, save_dir):
     grid = make_grid(images[:8], nrow=4, normalize=True)
+    
     plt.imshow(grid.permute(1, 2, 0).cpu().numpy())
     plt.title(f"Epoch {epoch}, Batch {batch_idx}")
+    
     os.makedirs(save_dir, exist_ok=True)
+    
     plt.savefig(os.path.join(save_dir, f'{phase}_epoch_{epoch}_batch_{batch_idx}.png'))
     plt.close()
+
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
+def save_sample_images_by_class(class_fake_images, epoch, save_dir, num_classes):
+    """
+    Saves a grid of images, one per class.
+
+    Parameters:
+    - class_fake_images: Dictionary with one fake image per class.
+    - epoch: Current epoch number.
+    - save_dir: Directory to save images.
+    - num_classes: Total number of classes.
+    """
+    
+    images = []
+    labels = []
+
+    # Collect images and labels in order of class IDs
+    for class_id in range(num_classes):
+        if class_id in class_fake_images:
+            images.append(class_fake_images[class_id])
+            labels.append(f'Class {class_id}')
+            
+        else:
+            # If no image was generated for a class, create a placeholder
+            placeholder = torch.zeros_like(next(iter(class_fake_images.values())))
+            images.append(placeholder)
+            labels.append(f'Class {class_id} (N/A)')
+
+    if images:
+        # Create a grid of images
+        grid = make_grid(images, nrow=num_classes, normalize=True, scale_each=True)
+        
+        plt.figure(figsize=(num_classes * 2, 2))
+        plt.imshow(grid.permute(1, 2, 0).numpy())
+        plt.title(f"Epoch {epoch} - Validation Samples")
+        plt.axis('off')
+        
+        # Annotate each image with its class label
+        for i, label in enumerate(labels):
+            plt.text(i * grid.shape[2] / num_classes + 5, grid.shape[1] - 10, label, color='white', fontsize=8, bbox=dict(facecolor='black', alpha=0.5))
+            
+        plt.savefig(os.path.join(save_dir, f'validation_epoch_{epoch}.png'))
+        plt.close()
 
 
 ################################################################
