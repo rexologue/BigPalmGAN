@@ -8,7 +8,32 @@ from discriminator import Discriminator
 ################################################################
 def instance_generator(num_classes):
     """Creates an instance of the BigGAN generator."""
-    conf = BigGANConfig(num_classes=num_classes)
+    confd = {"attention_layer_position": 8,
+            "channel_width": 128,
+            "class_embed_dim": 128,
+            "eps": 0.0001,
+            "layers":  [[False, 16, 16],
+                        [True, 16, 16],
+                        [False, 16, 16],
+                        [True, 16, 8],
+                        [False, 8, 8],
+                        [True, 8, 8],
+                        [False, 8, 8],
+                        [True, 8, 4],
+                        [False, 4, 4],
+                        [True, 4, 2],
+                        [False, 2, 2],
+                        [True, 2, 1],
+                        [False, 1, 1],
+                        [True, 1, 1]],
+            "n_stats": 51,
+            "num_classes": 1000,
+            "output_dim": 512,
+            "z_dim": 128
+            }
+    
+    conf = BigGANConfig.from_dict(confd)
+    
     return BigGAN(conf)
 
 ################################################################
