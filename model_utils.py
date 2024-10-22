@@ -3,29 +3,46 @@ import torch.nn as nn
 from biggan import BigGAN, BigGANConfig, GenBlock, SelfAttn
 from discriminator import Discriminator
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def instance_generator(num_classes):
     """Creates an instance of the BigGAN generator."""
     conf = BigGANConfig(num_classes=num_classes)
     return BigGAN(conf)
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def load_generator(num_classes, ckp):
     """Loads the generator's state from a checkpoint."""
     generator = instance_generator(num_classes)
+    
     if isinstance(ckp, str):
         generator.load_state_dict(torch.load(ckp))
     else:
         generator.load_state_dict(ckp)
+        
     return generator
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def setup_generator(num_classes, unfreeze_last_n, ckp=None):
     """Sets up the generator, loading from checkpoint if provided."""
+    
     if ckp is not None:
         generator = load_generator(num_classes, ckp)
     else:
         generator = instance_generator(num_classes)
+        
     freeze_generator(generator, unfreeze_last_n)
+    
     return generator
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def freeze_generator(generator, unfreeze_last_n=-1, unfreeze_embeddings=True):
     """
     Freezes layers of the generator except for the last `unfreeze_last_n` GenBlocks.
@@ -67,20 +84,31 @@ def freeze_generator(generator, unfreeze_last_n=-1, unfreeze_embeddings=True):
                 for param in layer.parameters():
                     param.requires_grad = True
 
-
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def setup_discriminator(num_classes, ckp=None):
     """Creates an instance of the discriminator and initializes weights."""
+    
     discriminator = Discriminator(num_classes)
     discriminator.apply(initialize_weights)
+    
     if ckp is not None:
         discriminator.load_state_dict(ckp)
+        
     return discriminator
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def initialize_weights(m):
     """Initializes weights of the model."""
+    
     if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
         nn.init.kaiming_normal_(m.weight, nonlinearity='leaky_relu')
+        
         if m.bias is not None:
             nn.init.constant_(m.bias, 0)
+            
     elif isinstance(m, nn.Embedding):
         nn.init.normal_(m.weight, mean=0, std=0.02)

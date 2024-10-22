@@ -15,11 +15,9 @@ def train(epochs,
           g_loss_fn,
           d_loss_fn,
           pixel_loss,
-          classification_loss,
           perceptual_loss,
           g_loss_weight,
           pixel_loss_weight,
-          classification_loss_weight,
           perceptual_loss_weight,
           accumulation_steps,
           lambda_gp,
@@ -29,6 +27,7 @@ def train(epochs,
           w_dir,
           device
           ):
+    
     scheduler_G = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer_G, T_max=epochs, eta_min=0)
     scheduler_D = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer_D, T_max=epochs, eta_min=0)
 
@@ -60,8 +59,7 @@ def train(epochs,
 
             # Train discriminator
             d_loss, real_acc, fake_acc = train_discriminator(
-                generator, discriminator, real_images, labels, d_loss_fn, classification_loss,
-                classification_loss_weight, optimizer_D, lambda_gp, num_classes, device)
+                generator, discriminator, real_images, labels, d_loss_fn, optimizer_D, lambda_gp, num_classes, device)
 
             d_loss_accum += d_loss
             real_acc_accum += real_acc
@@ -70,8 +68,7 @@ def train(epochs,
             # Train generator with gradient accumulation
             g_loss = train_generator(
                 generator, discriminator, real_images, labels, inception, g_loss_fn, pixel_loss, perceptual_loss,
-                g_loss_weight, pixel_loss_weight, perceptual_loss_weight, classification_loss,
-                classification_loss_weight, accumulation_steps, num_classes, device)
+                g_loss_weight, pixel_loss_weight, perceptual_loss_weight, accumulation_steps, num_classes, device)
 
             g_loss_accum += g_loss
 
@@ -110,8 +107,7 @@ def train(epochs,
         # Validation at the end of the epoch
         val_g_loss, val_d_loss, fid, val_real_acc, val_fake_acc = validate(
             generator, discriminator, inception, eval_loader, epoch, img_dir, g_loss_fn, d_loss_fn,
-            pixel_loss, classification_loss, perceptual_loss, g_loss_weight, pixel_loss_weight,
-            classification_loss_weight, perceptual_loss_weight, num_classes, device)
+            pixel_loss, perceptual_loss, g_loss_weight, pixel_loss_weight, perceptual_loss_weight, num_classes, device)
 
         su.print_stats(epoch, 'end', g_loss_epoch / len(train_loader), d_loss_epoch / len(train_loader), val_real_acc, val_fake_acc, val_g_loss, val_d_loss, fid)
 

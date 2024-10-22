@@ -2,10 +2,16 @@ import torch
 from support_utils import get_latent_input, save_sample_images_by_class
 from fid.fid_score import calculate_fid
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def compute_gradient_penalty(discriminator, real_images, fake_images, labels, device):
     alpha = torch.rand(real_images.size(0), 1, 1, 1, device=device)
+    
     interpolates = (alpha * real_images + (1 - alpha) * fake_images).requires_grad_(True)
+    
     d_interpolates = discriminator(interpolates, labels)
+    
     gradients = torch.autograd.grad(
         outputs=d_interpolates,
         inputs=interpolates,
@@ -14,21 +20,25 @@ def compute_gradient_penalty(discriminator, real_images, fake_images, labels, de
         retain_graph=True,
         only_inputs=True
     )[0]
+    
     gradients = gradients.view(gradients.size(0), -1)
     gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
+    
     return gradient_penalty
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def train_discriminator(generator,
                         discriminator,
                         real_images,
                         labels,
                         d_loss_fn,
-                        classification_loss,
-                        classification_loss_weight,
                         optimizer_D,
                         lambda_gp,
                         num_classes,
                         device):
+    
     # Generate fake images
     noise, labels = get_latent_input(real_images.size(0), labels, num_classes, device)
     fake_images = generator(noise, labels, truncation=0.4)
@@ -40,17 +50,10 @@ def train_discriminator(generator,
     # Discriminator losses
     d_adv_loss = d_loss_fn(real_outputs, fake_outputs)
 
-    # Classification loss (for real images)
-    # Assume you have a classification head in the discriminator
-    # If not, you can skip this loss or modify the discriminator accordingly
-    # d_class_outputs = discriminator.classify(real_images)
-    # d_class_loss = classification_loss(d_class_outputs, labels) * classification_loss_weight
-    # Total discriminator loss
-    d_loss = d_adv_loss  # + d_class_loss (if applicable)
-
     # Gradient penalty
     gradient_penalty = compute_gradient_penalty(discriminator, real_images, fake_images.detach(), labels, device)
-    d_loss += lambda_gp * gradient_penalty
+    
+    d_loss = d_adv_loss + lambda_gp * gradient_penalty
 
     # Backpropagation and optimization
     optimizer_D.zero_grad()
@@ -63,6 +66,9 @@ def train_discriminator(generator,
 
     return d_loss.item(), real_acc.item(), fake_acc.item()
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def train_generator(generator,
                     discriminator,
                     real_images,
@@ -74,11 +80,10 @@ def train_generator(generator,
                     g_loss_weight,
                     pixel_loss_weight,
                     perceptual_loss_weight,
-                    classification_loss,
-                    classification_loss_weight,
                     accumulation_steps,
                     num_classes,
                     device):
+    
     # Generate fake images
     noise, labels = get_latent_input(real_images.size(0), labels, num_classes, device)
     fake_images = generator(noise, labels, truncation=0.4)
@@ -93,23 +98,20 @@ def train_generator(generator,
     g_pixel_loss = pixel_loss(fake_images, real_images) * pixel_loss_weight
 
     # Perceptual loss
-    g_percep_loss = perceptual_loss(inception, fake_images, real_images) * perceptual_loss_weight
-
-    # Classification loss (using discriminator's projection)
-    # If the discriminator provides class outputs, you can use them
-    # Otherwise, you might need to adjust this part
-    # fake_class_outputs = discriminator.classify(fake_images)
-    # g_class_loss = classification_loss(fake_class_outputs, labels) * classification_loss_weight
+    g_perceptual_loss = perceptual_loss(inception, fake_images, real_images) * perceptual_loss_weight
 
     # Total generator loss
-    g_loss = g_adv_loss + g_pixel_loss + g_percep_loss  # + g_class_loss (if applicable)
-
+    g_loss = g_adv_loss + g_pixel_loss + g_perceptual_loss  
+    
     # Gradient accumulation
     g_loss = g_loss / accumulation_steps
     g_loss.backward()
 
-    return g_adv_loss.item() + g_pixel_loss.item() + g_percep_loss.item()  # + g_class_loss.item() (if applicable)
+    return g_adv_loss.item() + g_pixel_loss.item() + g_perceptual_loss.item()  
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def validate(generator,
              discriminator,
              inception,
@@ -125,6 +127,7 @@ def validate(generator,
              perceptual_loss_weight,
              num_classes,
              device):
+    
     generator.eval()
     discriminator.eval()
 

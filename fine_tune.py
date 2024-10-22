@@ -21,7 +21,6 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, required=True, help='Batch size')
     parser.add_argument('--g_loss_weight', type=float, required=True, help='Generator loss function weight')
     parser.add_argument('--pixel_loss_weight', type=float, required=True, help='Pixel loss weight')
-    parser.add_argument('--classification_loss_weight', type=float, required=True, help='Classification loss weight')
     parser.add_argument('--perceptual_loss_weight', type=float, required=True, help='Perceptual loss weight')
     parser.add_argument('--accumulation_steps', type=int, required=True, help='Steps for gradient accumulation')
     parser.add_argument('--lambda_gp', type=float, required=True, help='Lambda coefficient of gradient penalty')
@@ -78,7 +77,6 @@ if __name__ == '__main__':
     g_loss_fn = GeneratorHingeLoss()
     d_loss_fn = DiscriminatorHingeLoss()
     pixel_loss = torch.nn.MSELoss()
-    classification_loss = torch.nn.CrossEntropyLoss()
     perceptual_loss = InceptionPerceptualLoss()
 
     run_dir = create_unique_directory(os.path.join(args.output_dir, 'biggan_fine_tune_run'))
@@ -104,11 +102,9 @@ if __name__ == '__main__':
         g_loss_fn=g_loss_fn,
         d_loss_fn=d_loss_fn,
         pixel_loss=pixel_loss,
-        classification_loss=classification_loss,
         perceptual_loss=perceptual_loss,
         g_loss_weight=args.g_loss_weight,
         pixel_loss_weight=args.pixel_loss_weight,
-        classification_loss_weight=args.classification_loss_weight,
         perceptual_loss_weight=args.perceptual_loss_weight,
         accumulation_steps=args.accumulation_steps,
         lambda_gp=args.lambda_gp,

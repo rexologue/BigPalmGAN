@@ -15,8 +15,10 @@ class PalmDataset(Dataset):
         # Load image paths and labels
         for class_id in range(4):  # 4 classes
             class_dir = os.path.join(root_dir, str(class_id))
+            
             if not os.path.exists(class_dir):
                 continue
+            
             for img_name in os.listdir(class_dir):
                 img_path = os.path.join(class_dir, img_name)
                 self.image_paths.append(img_path)
@@ -27,15 +29,20 @@ class PalmDataset(Dataset):
 
     def __getitem__(self, idx):
         img_path = self.image_paths[idx]
+        
         try:
             image = Image.open(img_path).convert("RGB")
+            
         except Exception as e:
             print(f"Error loading image {img_path}: {e}")
             # Optionally return a placeholder image or skip this sample
             image = Image.new("RGB", (512, 512))
+            
         label = self.labels[idx]
+        
         if self.transform:
             image = self.transform(image)
+            
         return image, label
 
 # Image transforms
@@ -57,6 +64,7 @@ validation_transform = transforms.Compose([
 
 def setup_loader(path, batch_size, use_augs, train_phase=True):
     """Creates a data loader for training or validation."""
+    
     if train_phase and use_augs:
         dataset = PalmDataset(root_dir=path, transform=train_transform)
     else:
