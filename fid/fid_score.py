@@ -3,6 +3,9 @@ import torch
 import numpy as np
 from torch.nn.functional import adaptive_avg_pool2d
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def get_activations(
     images_tensor, model, batch_size=50, dims=2048, device="cuda", num_workers=0):
     """Calculates the activations of the pool_3 layer for all images in a tensor.
@@ -54,6 +57,9 @@ def get_activations(
         
     return pred_arr
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
     """Numpy implementation of the Frechet Distance.
     The Frechet distance between two multivariate Gaussians X_1 ~ N(mu_1, C_1)
@@ -104,7 +110,9 @@ def calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
 
     return diff.dot(diff) + np.trace(sigma1) + np.trace(sigma2) - 2 * tr_covmean
 
-
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def calculate_activation_statistics(
     images_tensor, model, batch_size=50, dims=2048, device="cuda", num_workers=0):
     """Calculation of the statistics used by the FID.
@@ -131,7 +139,9 @@ def calculate_activation_statistics(
     
     return mu, sigma
 
-
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def calculate_fid(tensor_1, tensor_2, model, device, batch_size=10, dims=2048, num_workers=0):
     """Calculates the FID of two paths"""
 

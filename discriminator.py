@@ -3,6 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils import spectral_norm
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 class DiscriminatorBlock(nn.Module):
     def __init__(self, in_channels, out_channels, downsample=True):
         super(DiscriminatorBlock, self).__init__()
@@ -31,6 +34,9 @@ class DiscriminatorBlock(nn.Module):
             
         return out + skip
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 class SelfAttn(nn.Module):
     """ Self attention Layer"""
     def __init__(self, in_channels, eps=1e-12):
@@ -60,6 +66,9 @@ class SelfAttn(nn.Module):
         
         return out
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 class Discriminator(nn.Module):
     def __init__(self, num_classes):
         super(Discriminator, self).__init__()

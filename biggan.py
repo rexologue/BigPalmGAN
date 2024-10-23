@@ -1,10 +1,10 @@
-import math
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from scipy.stats import truncnorm
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 class BigGANConfig(object):
     def __init__(self,
                  output_dim=128,
@@ -23,8 +23,8 @@ class BigGANConfig(object):
                          (False, 2, 2),
                          (True, 2, 1)],
                  attention_layer_position=8,
-                 eps=1e-4,
-                 n_stats=51):
+                 eps=1e-4):
+        
         """Constructs BigGANConfig. """
         self.output_dim = output_dim
         self.z_dim = z_dim
@@ -34,7 +34,6 @@ class BigGANConfig(object):
         self.layers = layers
         self.attention_layer_position = attention_layer_position
         self.eps = eps
-        self.n_stats = n_stats
 
     @classmethod
     def from_dict(cls, json_object):
@@ -43,15 +42,24 @@ class BigGANConfig(object):
         for key, value in json_object.items():
             config.__dict__[key] = value
         return config
-
+    
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def snconv2d(eps=1e-12, **kwargs):
     return nn.utils.spectral_norm(
         nn.Conv2d(**kwargs), eps=eps)
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def snlinear(eps=1e-12, **kwargs):
     return nn.utils.spectral_norm(
         nn.Linear(**kwargs), eps=eps)
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 class SelfAttn(nn.Module):
     """Self attention Layer"""
     def __init__(self, in_channels, eps=1e-12):
@@ -114,11 +122,13 @@ class SelfAttn(nn.Module):
         
         return out
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 class BigGANBatchNorm(nn.Module):
     """Batch Norm with optional conditional input."""
     def __init__(self, num_features,
                  condition_vector_dim=None,
-                 n_stats=51,
                  eps=1e-4,
                  momentum=0.1,
                  conditional=True):
@@ -152,7 +162,7 @@ class BigGANBatchNorm(nn.Module):
             self.weight = nn.Parameter(torch.ones(num_features))
             self.bias = nn.Parameter(torch.zeros(num_features))
 
-    def forward(self, x, truncation, condition_vector=None):
+    def forward(self, x, condition_vector=None):
         if self.training:
             # Compute batch statistics
             batch_mean = x.mean([0, 2, 3])  # Mean over batch, height, width
@@ -193,47 +203,49 @@ class BigGANBatchNorm(nn.Module):
 
         return out
 
-
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 class GenBlock(nn.Module):
-    def __init__(self, in_size, out_size, condition_vector_dim, reduction_factor=4, up_sample=False,
-                 n_stats=51, eps=1e-12):
+    def __init__(self, in_size, out_size, condition_vector_dim, reduction_factor=4, up_sample=False, eps=1e-12):
         super(GenBlock, self).__init__()
+        
         self.up_sample = up_sample
         self.drop_channels = (in_size != out_size)
         middle_size = in_size // reduction_factor
 
-        self.bn_0 = BigGANBatchNorm(in_size, condition_vector_dim, n_stats=n_stats, eps=eps, conditional=True)
+        self.bn_0 = BigGANBatchNorm(in_size, condition_vector_dim, eps=eps, conditional=True)
         self.conv_0 = snconv2d(in_channels=in_size, out_channels=middle_size, kernel_size=1, eps=eps)
 
-        self.bn_1 = BigGANBatchNorm(middle_size, condition_vector_dim, n_stats=n_stats, eps=eps, conditional=True)
+        self.bn_1 = BigGANBatchNorm(middle_size, condition_vector_dim,  eps=eps, conditional=True)
         self.conv_1 = snconv2d(in_channels=middle_size, out_channels=middle_size, kernel_size=3, padding=1, eps=eps)
 
-        self.bn_2 = BigGANBatchNorm(middle_size, condition_vector_dim, n_stats=n_stats, eps=eps, conditional=True)
+        self.bn_2 = BigGANBatchNorm(middle_size, condition_vector_dim, eps=eps, conditional=True)
         self.conv_2 = snconv2d(in_channels=middle_size, out_channels=middle_size, kernel_size=3, padding=1, eps=eps)
 
-        self.bn_3 = BigGANBatchNorm(middle_size, condition_vector_dim, n_stats=n_stats, eps=eps, conditional=True)
+        self.bn_3 = BigGANBatchNorm(middle_size, condition_vector_dim, eps=eps, conditional=True)
         self.conv_3 = snconv2d(in_channels=middle_size, out_channels=out_size, kernel_size=1, eps=eps)
 
         self.relu = nn.ReLU()
 
-    def forward(self, x, cond_vector, truncation):
+    def forward(self, x, cond_vector):
         x0 = x
 
-        x = self.bn_0(x, truncation, cond_vector)
+        x = self.bn_0(x, cond_vector)
         x = self.relu(x)
         x = self.conv_0(x)
 
-        x = self.bn_1(x, truncation, cond_vector)
+        x = self.bn_1(x, cond_vector)
         x = self.relu(x)
         if self.up_sample:
             x = F.interpolate(x, scale_factor=2, mode='nearest')
         x = self.conv_1(x)
 
-        x = self.bn_2(x, truncation, cond_vector)
+        x = self.bn_2(x, cond_vector)
         x = self.relu(x)
         x = self.conv_2(x)
 
-        x = self.bn_3(x, truncation, cond_vector)
+        x = self.bn_3(x, cond_vector)
         x = self.relu(x)
         x = self.conv_3(x)
 
@@ -246,6 +258,9 @@ class GenBlock(nn.Module):
         out = x + x0
         return out
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 class Generator(nn.Module):
     def __init__(self, config):
         super(Generator, self).__init__()
@@ -264,16 +279,16 @@ class Generator(nn.Module):
                                    ch*layer[2],
                                    condition_vector_dim,
                                    up_sample=layer[0],
-                                   n_stats=config.n_stats,
                                    eps=config.eps))
+            
         self.layers = nn.ModuleList(layers)
 
-        self.bn = BigGANBatchNorm(ch, n_stats=config.n_stats, eps=config.eps, conditional=False)
+        self.bn = BigGANBatchNorm(ch, eps=config.eps, conditional=False)
         self.relu = nn.ReLU()
         self.conv_to_rgb = snconv2d(in_channels=ch, out_channels=ch, kernel_size=3, padding=1, eps=config.eps)
         self.tanh = nn.Tanh()
 
-    def forward(self, cond_vector, truncation):
+    def forward(self, cond_vector):
         z = self.gen_z(cond_vector)
 
         # We use this conversion step to be able to use TF weights:
@@ -284,18 +299,20 @@ class Generator(nn.Module):
 
         for i, layer in enumerate(self.layers):
             if isinstance(layer, GenBlock):
-                z = layer(z, cond_vector, truncation)
+                z = layer(z, cond_vector)
             else:
                 z = layer(z)
 
-        z = self.bn(z, truncation)
+        z = self.bn(z)
         z = self.relu(z)
         z = self.conv_to_rgb(z)
         z = z[:, :3, ...]
         z = self.tanh(z)
         return z
 
-
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 class BigGAN(nn.Module):
     """BigGAN Generator."""
     def __init__(self, config):
@@ -314,9 +331,14 @@ class BigGAN(nn.Module):
         
         return z
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def truncated_noise_sample(batch_size, dim_z, truncation, device):
     noise = torch.randn(batch_size, dim_z, device=device)
+    
     if truncation < 1.0:
         noise = torch.clamp(noise, -truncation, truncation)
+        
     return noise
 

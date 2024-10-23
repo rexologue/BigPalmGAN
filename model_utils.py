@@ -36,8 +36,7 @@ def instance_generator(num_classes:int):
                                         [False, 1, 1],
                                         [True, 1, 1]],
                             'attention_layer_position': 8,
-                            'eps': 0.0001,
-                            'n_stats': 51})
+                            'eps': 0.0001})
 
     # Создание экземпляра генератора BigGAN с заданной конфигурацией
     return BigGAN(conf)

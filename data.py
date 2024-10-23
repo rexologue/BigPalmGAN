@@ -3,6 +3,9 @@ from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 class PalmDataset(Dataset):
     """Dataset class for palm images with labels."""
 
@@ -45,7 +48,9 @@ class PalmDataset(Dataset):
             
         return image, label
 
-# Image transforms
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 train_transform = transforms.Compose([
     transforms.RandomHorizontalFlip(),
     transforms.RandomVerticalFlip(),
@@ -56,12 +61,18 @@ train_transform = transforms.Compose([
     transforms.Normalize([0.5]*3, [0.5]*3)
 ])
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 validation_transform = transforms.Compose([
     transforms.Resize((512, 512)),
     transforms.ToTensor(),
     transforms.Normalize([0.5]*3, [0.5]*3)
 ])
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def setup_loader(path, batch_size, use_augs, train_phase=True):
     """Creates a data loader for training or validation."""
     

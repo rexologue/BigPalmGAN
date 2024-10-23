@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 class InceptionPerceptualLoss(nn.modules.loss._Loss):
     def __init__(self):
         super(InceptionPerceptualLoss, self).__init__()
@@ -17,7 +20,10 @@ class InceptionPerceptualLoss(nn.modules.loss._Loss):
         loss = self.mse(fake_pred, real_pred)
             
         return loss
-    
+  
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################  
 class DiscriminatorHingeLoss(nn.modules.loss._Loss):
     def __init__(self):
         super(DiscriminatorHingeLoss, self).__init__()
@@ -28,6 +34,9 @@ class DiscriminatorHingeLoss(nn.modules.loss._Loss):
         
         return real_loss + fake_loss
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 class GeneratorHingeLoss(nn.modules.loss._Loss):
     def __init__(self):
         super(GeneratorHingeLoss, self).__init__()

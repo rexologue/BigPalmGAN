@@ -7,7 +7,9 @@ import torchvision
 # http://download.tensorflow.org/models/image/imagenet/inception-2015-12-05.tgz
 FID_WEIGHTS_URL = "https://github.com/mseitzer/pytorch-fid/releases/download/fid_weights/pt_inception-2015-12-05-6726825d.pth"  # noqa: E501
 
-
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 class InceptionV3(nn.Module):
     """Pretrained InceptionV3 network returning feature maps"""
 
@@ -184,7 +186,9 @@ def _inception_v3(*args, **kwargs):
 
     return torchvision.models.inception_v3(*args, **kwargs)
 
-
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def fid_inception_v3(weigthts_path:str):
     """Build pretrained Inception model for FID computation
 
@@ -210,7 +214,9 @@ def fid_inception_v3(weigthts_path:str):
     
     return inception
 
-
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 class FIDInceptionA(torchvision.models.inception.InceptionA):
     """InceptionA block patched for FID computation"""
 
@@ -237,7 +243,9 @@ class FIDInceptionA(torchvision.models.inception.InceptionA):
         outputs = [branch1x1, branch5x5, branch3x3dbl, branch_pool]
         return torch.cat(outputs, 1)
 
-
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 class FIDInceptionC(torchvision.models.inception.InceptionC):
     """InceptionC block patched for FID computation"""
 
@@ -267,7 +275,9 @@ class FIDInceptionC(torchvision.models.inception.InceptionC):
         outputs = [branch1x1, branch7x7, branch7x7dbl, branch_pool]
         return torch.cat(outputs, 1)
 
-
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 class FIDInceptionE_1(torchvision.models.inception.InceptionE):
     """First InceptionE block patched for FID computation"""
 
@@ -302,7 +312,9 @@ class FIDInceptionE_1(torchvision.models.inception.InceptionE):
         outputs = [branch1x1, branch3x3, branch3x3dbl, branch_pool]
         return torch.cat(outputs, 1)
 
-
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 class FIDInceptionE_2(torchvision.models.inception.InceptionE):
     """Second InceptionE block patched for FID computation"""
 
@@ -337,6 +349,9 @@ class FIDInceptionE_2(torchvision.models.inception.InceptionE):
         outputs = [branch1x1, branch3x3, branch3x3dbl, branch_pool]
         return torch.cat(outputs, 1)
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def setup_inception(weights_path):
     inception = InceptionV3(weights_path)
     inception.eval()

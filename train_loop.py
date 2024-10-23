@@ -3,6 +3,9 @@ from tqdm import tqdm
 from train_utils import train_discriminator, train_generator, validate
 import support_utils as su
 
+################################################################
+# //////////////////////////////////////////////////////////// #
+################################################################
 def train(epochs,
           start_epoch,
           generator,
