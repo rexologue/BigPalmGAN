@@ -18,6 +18,8 @@ if __name__ == '__main__':
     parser.add_argument('--lr_d', type=float, required=True, help='Discriminator learning rate')
     parser.add_argument('--weight_decay_g', type=float, required=True, help='Weight decay of generator')
     parser.add_argument('--weight_decay_d', type=float, required=True, help='Weight decay of discriminator')
+    parser.add_argument('--betas_g', nargs='+', type=float, required=True, help='Betas for generator optimizer')
+    parser.add_argument('--betas_d', nargs='+', type=float, required=True, help='Betas for discriminator optimizer')
     parser.add_argument('--batch_size', type=int, required=True, help='Batch size')
     parser.add_argument('--g_loss_weight', type=float, required=True, help='Generator loss function weight')
     parser.add_argument('--pixel_loss_weight', type=float, required=True, help='Pixel loss weight')
@@ -62,9 +64,9 @@ if __name__ == '__main__':
     inception.to(device)
 
     optimizer_G = torch.optim.AdamW(filter(lambda p: p.requires_grad, generator.parameters()),
-                                    lr=args.lr_g, betas=(0.5, 0.999), weight_decay=args.weight_decay_g)
+                                    lr=args.lr_g, betas=tuple(args.betas_g), weight_decay=args.weight_decay_g)
     optimizer_D = torch.optim.AdamW(discriminator.parameters(),
-                                    lr=args.lr_d, betas=(0.5, 0.999), weight_decay=args.weight_decay_d)
+                                    lr=args.lr_d, betas=tuple(args.betas_d), weight_decay=args.weight_decay_d)
 
     if g_opt_ckp is not None:
         optimizer_G.load_state_dict(g_opt_ckp)
