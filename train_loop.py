@@ -86,7 +86,7 @@ def train(epochs,
             if batch_idx % print_every_n_batches == 0 and batch_idx != 0:
                 with torch.no_grad():
                     noise, labels = su.get_latent_input(real_images.size(0), labels, device)
-                    fake_images = generator(noise, labels, truncation=0.4)
+                    fake_images = generator(noise, labels)
                     su.save_sample_images(fake_images, epoch, "train", batch_idx, img_dir)
 
                 cur_g_loss = g_loss_accum / accums

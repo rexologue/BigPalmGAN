@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 # //////////////////////////////////////////////////////////// #
 ################################################################
 def get_latent_input(batch_size, labels, device='cpu'):
-    noise = truncated_noise_sample(truncation=0.2, batch_size=batch_size).to(device)
+    noise = truncated_noise_sample(batch_size=batch_size, truncation=0.4, dim_z=128, device=device)
     labels = labels.to(device).long()
     return noise, labels    
 

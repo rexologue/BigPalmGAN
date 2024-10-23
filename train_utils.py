@@ -40,7 +40,7 @@ def train_discriminator(generator,
     
     # Generate fake images
     noise, labels = get_latent_input(real_images.size(0), labels, device)
-    fake_images = generator(noise, labels, truncation=0.4)
+    fake_images = generator(noise, labels)
 
     # Get discriminator outputs
     real_outputs = discriminator(real_images, labels)
@@ -84,7 +84,7 @@ def train_generator(generator,
     
     # Generate fake images
     noise, labels = get_latent_input(real_images.size(0), labels, device)
-    fake_images = generator(noise, labels, truncation=0.4)
+    fake_images = generator(noise, labels)
 
     # Get discriminator outputs
     fake_outputs = discriminator(fake_images, labels)
