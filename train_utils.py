@@ -1,5 +1,4 @@
 import torch
-from torch.cuda.amp import autocast
 from support_utils import get_latent_input, save_sample_images_by_class
 from fid.fid_score import calculate_fid
 
@@ -43,7 +42,7 @@ def train_discriminator(generator,
     # Generate fake images
     noise, labels = get_latent_input(real_images.size(0), labels, device)
     
-    with autocast():
+    with torch.amp.autocast(device_type=device, dtype=torch.float16):
         fake_images = generator(noise, labels)
 
         # Get discriminator outputs
@@ -91,7 +90,7 @@ def train_generator(generator,
     # Generate fake images
     noise, labels = get_latent_input(real_images.size(0), labels, device)
     
-    with autocast():
+    with torch.amp.autocast(device_type=device, dtype=torch.float16):
         fake_images = generator(noise, labels)
 
         # Get discriminator outputs
@@ -159,7 +158,7 @@ def validate(generator,
             batch_size = real_images.size(0)
             noise, labels = get_latent_input(batch_size, labels, device)
             
-            with autocast():
+            with torch.amp.autocast(device_type=device, dtype=torch.float16):
                 fake_images = generator(noise, labels)
 
                 # Get discriminator outputs
