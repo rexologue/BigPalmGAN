@@ -6,34 +6,40 @@ from discriminator import Discriminator
 ################################################################
 # //////////////////////////////////////////////////////////// #
 ################################################################
-def instance_generator(num_classes):
-    """Creates an instance of the BigGAN generator."""
-    confd = {"attention_layer_position": 8,
-            "channel_width": 128,
-            "class_embed_dim": 128,
-            "eps": 0.0001,
-            "layers":  [[False, 16, 16],
-                        [True, 16, 16],
-                        [False, 16, 16],
-                        [True, 16, 8],
-                        [False, 8, 8],
-                        [True, 8, 8],
-                        [False, 8, 8],
-                        [True, 8, 4],
-                        [False, 4, 4],
-                        [True, 4, 2],
-                        [False, 2, 2],
-                        [True, 2, 1],
-                        [False, 1, 1],
-                        [True, 1, 1]],
-            "n_stats": 51,
-            "num_classes": num_classes,
-            "output_dim": 512,
-            "z_dim": 128
-            }
-    
-    conf = BigGANConfig.from_dict(confd)
-    
+def instance_generator(num_classes:int):
+    """
+    Создает экземпляр генератора BigGAN с заданной конфигурацией.
+
+    Возвращает:
+    - generator: Экземпляр генератора BigGAN.
+    """
+
+    # Создание конфигурации BigGAN
+    conf = BigGANConfig()
+    conf = conf.from_dict({'output_dim': 512,
+                            'z_dim': 128,
+                            'class_embed_dim': 128,
+                            'channel_width': 128,
+                            'num_classes': num_classes,
+                            'layers': [[False, 16, 16],
+                                        [True, 16, 16],
+                                        [False, 16, 16],
+                                        [True, 16, 8],
+                                        [False, 8, 8],
+                                        [True, 8, 8],
+                                        [False, 8, 8],
+                                        [True, 8, 4],
+                                        [False, 4, 4],
+                                        [True, 4, 2],
+                                        [False, 2, 2],
+                                        [True, 2, 1],
+                                        [False, 1, 1],
+                                        [True, 1, 1]],
+                            'attention_layer_position': 8,
+                            'eps': 0.0001,
+                            'n_stats': 51})
+
+    # Создание экземпляра генератора BigGAN с заданной конфигурацией
     return BigGAN(conf)
 
 ################################################################
