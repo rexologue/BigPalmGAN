@@ -73,9 +73,8 @@ class Discriminator(nn.Module):
         super(Discriminator, self).__init__()
         
         self.num_classes = num_classes
-        self.embed_dim = 256  # Reduced embedding dimension
+        self.embed_dim = 128  # Reduced embedding dimension
         self.embed = nn.Embedding(num_classes, self.embed_dim)
-        nn.init.normal_(self.embed.weight, mean=0.0, std=0.02)  # Initialize embeddings
 
         self.initial_conv = spectral_norm(nn.Conv2d(3, 64, kernel_size=3, padding=1))
         

@@ -39,7 +39,11 @@ def instance_generator(num_classes:int):
                             'eps': 0.0001})
 
     # Создание экземпляра генератора BigGAN с заданной конфигурацией
-    return BigGAN(conf)
+    
+    generator = BigGAN(conf)
+    generator.apply(initialize_weights)
+    
+    return generator
 
 ################################################################
 # //////////////////////////////////////////////////////////// #
