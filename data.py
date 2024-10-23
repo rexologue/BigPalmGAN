@@ -81,4 +81,4 @@ def setup_loader(path, batch_size, use_augs, train_phase=True):
     else:
         dataset = PalmDataset(root_dir=path, transform=validation_transform)
         
-    return DataLoader(dataset, batch_size=batch_size, shuffle=train_phase, num_workers=4)
+    return DataLoader(dataset, batch_size=batch_size, shuffle=train_phase)

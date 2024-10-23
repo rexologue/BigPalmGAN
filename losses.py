@@ -42,6 +42,6 @@ class GeneratorHingeLoss(nn.modules.loss._Loss):
         super(GeneratorHingeLoss, self).__init__()
 
     def forward(self, fake_output):
-        # Hinge loss for generator: Max(0, -fake_output)
+        # Generator hinge loss: Maximize fake_output
         loss = -torch.mean(fake_output)
         return loss

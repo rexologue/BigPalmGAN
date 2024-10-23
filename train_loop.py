@@ -1,7 +1,7 @@
 import torch
 from tqdm import tqdm
 from train_utils import train_discriminator, train_generator, validate
-from torch.cuda.amp import GradScaler
+from torch.amp import GradScaler
 import support_utils as su
 
 ################################################################

@@ -51,11 +51,12 @@ def train_discriminator(generator,
 
         # Discriminator losses
         d_adv_loss = d_loss_fn(real_outputs, fake_outputs)
-
-        # Gradient penalty
+        
+    # Compute gradient penalty in full precision
+    with torch.amp.autocast(device_type='cuda', enabled=False):
         gradient_penalty = compute_gradient_penalty(discriminator, real_images, fake_images.detach(), labels, device)
         
-        d_loss = d_adv_loss + lambda_gp * gradient_penalty
+    d_loss = d_adv_loss + lambda_gp * gradient_penalty
 
     # Backpropagation and optimization
     optimizer_D.zero_grad()
