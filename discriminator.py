@@ -38,8 +38,8 @@ class DiscriminatorBlock(nn.Module):
 # //////////////////////////////////////////////////////////// #
 ################################################################
 class SelfAttn(nn.Module):
-    """ Self attention Layer"""
-    def __init__(self, in_channels, eps=1e-12):
+    """ Self-attention Layer"""
+    def __init__(self, in_channels):
         super(SelfAttn, self).__init__()
         self.in_channels = in_channels
         
@@ -53,17 +53,16 @@ class SelfAttn(nn.Module):
         self.gamma = nn.Parameter(torch.zeros(1))
 
     def forward(self, x):
-        _, ch, h, w = x.size()
-        theta = self.snconv1x1_theta(x).view(-1, ch // 8, h * w)
+        batch_size, ch, h, w = x.size()
+        theta = self.snconv1x1_theta(x).view(batch_size, -1, h * w)
         phi = self.snconv1x1_phi(x)
-        phi = self.maxpool(phi).view(-1, ch // 8, h * w // 4)
+        phi = self.maxpool(phi).view(batch_size, -1, h * w // 4)
         attn = torch.bmm(theta.permute(0, 2, 1), phi)
         attn = self.softmax(attn)
         g = self.snconv1x1_g(x)
-        g = self.maxpool(g).view(-1, ch // 2, h * w // 4)
-        attn_g = torch.bmm(g, attn.permute(0, 2, 1)).view(-1, ch // 2, h, w)
+        g = self.maxpool(g).view(batch_size, -1, h * w // 4)
+        attn_g = torch.bmm(g, attn.permute(0, 2, 1)).view(batch_size, ch // 2, h, w)
         out = x + self.gamma * self.snconv1x1_o_conv(attn_g)
-        
         return out
 
 ################################################################
@@ -74,41 +73,42 @@ class Discriminator(nn.Module):
         super(Discriminator, self).__init__()
         
         self.num_classes = num_classes
-        self.embed = nn.Embedding(num_classes, 1024)
+        self.embed_dim = 256  # Reduced embedding dimension
+        self.embed = nn.Embedding(num_classes, self.embed_dim)
+        nn.init.normal_(self.embed.weight, mean=0.0, std=0.02)  # Initialize embeddings
 
         self.initial_conv = spectral_norm(nn.Conv2d(3, 64, kernel_size=3, padding=1))
         
         self.blocks = nn.ModuleList([
-            DiscriminatorBlock(64, 128, downsample=True),    # 256x256
-            DiscriminatorBlock(128, 256, downsample=True),   # 128x128
-            DiscriminatorBlock(256, 512, downsample=True),   # 64x64
-            DiscriminatorBlock(512, 1024, downsample=True),  # 32x32
-            DiscriminatorBlock(1024, 1024, downsample=True), # 16x16
-            DiscriminatorBlock(1024, 1024, downsample=True), # 8x8
-            DiscriminatorBlock(1024, 1024, downsample=True), # 4x4
+            DiscriminatorBlock(64, 128, downsample=True),    # 256x256 -> 128x128
+            DiscriminatorBlock(128, 256, downsample=True),   # 128x128 -> 64x64
+            DiscriminatorBlock(256, 512, downsample=True),   # 64x64 -> 32x32
+            DiscriminatorBlock(512, 512, downsample=True),   # 32x32 -> 16x16
+            DiscriminatorBlock(512, 512, downsample=True),   # 16x16 -> 8x8
+            DiscriminatorBlock(512, 512, downsample=True),   # 8x8 -> 4x4
+            DiscriminatorBlock(512, self.embed_dim, downsample=False),  # 4x4 -> 4x4
         ])
         
-        self.self_attn = SelfAttn(256)  # Insert attention layer after second block
+        self.self_attn = SelfAttn(256)  # Insert attention layer after the second block
         self.activation = nn.LeakyReLU(0.1)
         
-        self.fc = spectral_norm(nn.Linear(1024, 1))
+        self.fc = spectral_norm(nn.Linear(self.embed_dim, 1))
 
     def forward(self, x, labels):
         h = self.initial_conv(x)
         
         for idx, block in enumerate(self.blocks):
             h = block(h)
-            
             if idx == 1:  # Apply self-attention after the second block
                 h = self.self_attn(h)
                 
         h = self.activation(h)
-        h = torch.sum(h, dim=[2, 3])  # Global sum pooling
+        h = torch.sum(h, dim=[2, 3])  # Global sum pooling, resulting in [batch_size, embed_dim]
         
-        out_adv = self.fc(h).squeeze(1)
+        out_adv = self.fc(h).squeeze(1)  # Output scalar value per batch
         
         # Projection discriminator
-        embed = self.embed(labels)
+        embed = self.embed(labels)  # Shape: [batch_size, embed_dim]
         proj = torch.sum(h * embed, dim=1)
         out_adv += proj
         

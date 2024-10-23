@@ -1,4 +1,5 @@
 import torch
+from torch.cuda.amp import autocast
 from support_utils import get_latent_input, save_sample_images_by_class
 from fid.fid_score import calculate_fid
 
@@ -36,28 +37,32 @@ def train_discriminator(generator,
                         d_loss_fn,
                         optimizer_D,
                         lambda_gp,
-                        device):
+                        device,
+                        scaler):
     
     # Generate fake images
     noise, labels = get_latent_input(real_images.size(0), labels, device)
-    fake_images = generator(noise, labels)
-
-    # Get discriminator outputs
-    real_outputs = discriminator(real_images, labels)
-    fake_outputs = discriminator(fake_images.detach(), labels)
-
-    # Discriminator losses
-    d_adv_loss = d_loss_fn(real_outputs, fake_outputs)
-
-    # Gradient penalty
-    gradient_penalty = compute_gradient_penalty(discriminator, real_images, fake_images.detach(), labels, device)
     
-    d_loss = d_adv_loss + lambda_gp * gradient_penalty
+    with autocast():
+        fake_images = generator(noise, labels)
+
+        # Get discriminator outputs
+        real_outputs = discriminator(real_images, labels)
+        fake_outputs = discriminator(fake_images.detach(), labels)
+
+        # Discriminator losses
+        d_adv_loss = d_loss_fn(real_outputs, fake_outputs)
+
+        # Gradient penalty
+        gradient_penalty = compute_gradient_penalty(discriminator, real_images, fake_images.detach(), labels, device)
+        
+        d_loss = d_adv_loss + lambda_gp * gradient_penalty
 
     # Backpropagation and optimization
     optimizer_D.zero_grad()
-    d_loss.backward()
-    optimizer_D.step()
+    scaler.scale(d_loss).backward()
+    scaler.step(optimizer_D)
+    scaler.update()
 
     # Compute accuracies
     real_acc = (real_outputs > 0).float().mean()
@@ -80,30 +85,34 @@ def train_generator(generator,
                     pixel_loss_weight,
                     perceptual_loss_weight,
                     accumulation_steps,
-                    device):
+                    device,
+                    scaler):
     
     # Generate fake images
     noise, labels = get_latent_input(real_images.size(0), labels, device)
-    fake_images = generator(noise, labels)
-
-    # Get discriminator outputs
-    fake_outputs = discriminator(fake_images, labels)
-
-    # Generator adversarial loss
-    g_adv_loss = g_loss_fn(fake_outputs) * g_loss_weight
-
-    # Pixel loss
-    g_pixel_loss = pixel_loss(fake_images, real_images) * pixel_loss_weight
-
-    # Perceptual loss
-    g_perceptual_loss = perceptual_loss(inception, fake_images, real_images) * perceptual_loss_weight
-
-    # Total generator loss
-    g_loss = g_adv_loss + g_pixel_loss + g_perceptual_loss  
     
-    # Gradient accumulation
-    g_loss = g_loss / accumulation_steps
-    g_loss.backward()
+    with autocast():
+        fake_images = generator(noise, labels)
+
+        # Get discriminator outputs
+        fake_outputs = discriminator(fake_images, labels)
+
+        # Generator adversarial loss
+        g_adv_loss = g_loss_fn(fake_outputs) * g_loss_weight
+
+        # Pixel loss
+        g_pixel_loss = pixel_loss(fake_images, real_images) * pixel_loss_weight
+
+        # Perceptual loss
+        g_perceptual_loss = perceptual_loss(inception, fake_images, real_images) * perceptual_loss_weight
+
+        # Total generator loss
+        g_loss = g_adv_loss + g_pixel_loss + g_perceptual_loss  
+    
+        # Gradient accumulation
+        g_loss = g_loss / accumulation_steps
+        
+    scaler.scale(g_loss).backward()
 
     return g_adv_loss.item() + g_pixel_loss.item() + g_perceptual_loss.item()  
 
@@ -124,7 +133,8 @@ def validate(generator,
              pixel_loss_weight,
              perceptual_loss_weight,
              num_classes,
-             device):
+             device,
+             scaler):
     
     generator.eval()
     discriminator.eval()
@@ -148,23 +158,25 @@ def validate(generator,
             # Generate fake images
             batch_size = real_images.size(0)
             noise, labels = get_latent_input(batch_size, labels, device)
-            fake_images = generator(noise, labels, truncation=0.4)
+            
+            with autocast():
+                fake_images = generator(noise, labels)
 
-            # Get discriminator outputs
-            real_outputs = discriminator(real_images, labels)
-            fake_outputs = discriminator(fake_images, labels)
+                # Get discriminator outputs
+                real_outputs = discriminator(real_images, labels)
+                fake_outputs = discriminator(fake_images, labels)
 
-            # Discriminator losses
-            d_adv_loss = d_loss_fn(real_outputs, fake_outputs)
-            d_loss = d_adv_loss
-            val_d_loss += d_loss.item()
+                # Discriminator losses
+                d_adv_loss = d_loss_fn(real_outputs, fake_outputs)
+                d_loss = d_adv_loss
+                val_d_loss += d_loss.item()
 
-            # Generator losses
-            g_adv_loss = g_loss_fn(fake_outputs) * g_loss_weight
-            g_pixel_loss = pixel_loss(fake_images, real_images) * pixel_loss_weight
-            g_percep_loss = perceptual_loss(inception, fake_images, real_images) * perceptual_loss_weight
-            g_loss = g_adv_loss + g_pixel_loss + g_percep_loss
-            val_g_loss += g_loss.item()
+                # Generator losses
+                g_adv_loss = g_loss_fn(fake_outputs) * g_loss_weight
+                g_pixel_loss = pixel_loss(fake_images, real_images) * pixel_loss_weight
+                g_percep_loss = perceptual_loss(inception, fake_images, real_images) * perceptual_loss_weight
+                g_loss = g_adv_loss + g_pixel_loss + g_percep_loss
+                val_g_loss += g_loss.item()
 
             # Collect images for FID calculation
             real_fid.append(real_images.cpu())
