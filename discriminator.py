@@ -21,7 +21,7 @@ class DiscriminatorBlock(nn.Module):
     def forward(self, x):
         # out = self.activation(x)
         # out = self.conv1(out)
-        out = self.activation(out)
+        out = self.activation(x)
         out = self.conv2(out)
         
         if self.downsample:
