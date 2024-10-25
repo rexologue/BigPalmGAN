@@ -52,8 +52,6 @@ class PalmDataset(Dataset):
 # //////////////////////////////////////////////////////////// #
 ################################################################
 train_transform = transforms.Compose([
-    transforms.RandomHorizontalFlip(),
-    transforms.RandomVerticalFlip(),
     transforms.RandomRotation(15),
     transforms.RandomResizedCrop(512, scale=(0.8, 1.0)),
     transforms.ColorJitter(brightness=0.1, contrast=0.1),

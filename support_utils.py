@@ -62,7 +62,7 @@ def save_sample_images_by_class(class_fake_images, epoch, save_dir, num_classes)
         grid = make_grid(images, nrow=num_classes, normalize=True, scale_each=True)
         
         plt.figure(figsize=(num_classes * 2, 2))
-        plt.imshow(grid.permute(1, 2, 0).numpy())
+        plt.imshow(grid.permute(1, 2, 0).cpu().numpy())
         plt.title(f"Epoch {epoch} - Validation Samples")
         plt.axis('off')
         

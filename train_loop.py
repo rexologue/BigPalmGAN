@@ -1,7 +1,6 @@
 import torch
 from tqdm import tqdm
 from train_utils import train_discriminator, train_generator, validate
-from torch.amp import GradScaler
 import support_utils as su
 
 ################################################################
@@ -34,8 +33,6 @@ def train(epochs,
     
     scheduler_G = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer_G, T_max=epochs, eta_min=0)
     scheduler_D = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer_D, T_max=epochs, eta_min=0)
-    
-    scaler = GradScaler()
 
     for epoch in range(epochs):
         if epoch <= start_epoch:
@@ -65,7 +62,7 @@ def train(epochs,
 
             # Train discriminator
             d_loss, real_acc, fake_acc = train_discriminator(
-                generator, discriminator, real_images, labels, d_loss_fn, optimizer_D, lambda_gp, device, scaler)
+                generator, discriminator, real_images, labels, d_loss_fn, optimizer_D, lambda_gp, device)
 
             d_loss_accum += d_loss
             real_acc_accum += real_acc
@@ -74,7 +71,7 @@ def train(epochs,
             # Train generator with gradient accumulation
             g_loss = train_generator(
                 generator, discriminator, real_images, labels, inception, g_loss_fn, pixel_loss, perceptual_loss,
-                g_loss_weight, pixel_loss_weight, perceptual_loss_weight, accumulation_steps, device, scaler)
+                g_loss_weight, pixel_loss_weight, perceptual_loss_weight, accumulation_steps, device)
 
             g_loss_accum += g_loss
 
@@ -82,8 +79,7 @@ def train(epochs,
 
             # Update generator weights after accumulation
             if (batch_idx + 1) % accumulation_steps == 0:
-                scaler.step(optimizer_G)
-                scaler.update()
+                optimizer_G.step()
                 optimizer_G.zero_grad()
 
             # Save sample images
@@ -114,7 +110,7 @@ def train(epochs,
         # Validation at the end of the epoch
         val_g_loss, val_d_loss, fid, val_real_acc, val_fake_acc = validate(
             generator, discriminator, inception, eval_loader, epoch, img_dir, g_loss_fn, d_loss_fn,
-            pixel_loss, perceptual_loss, g_loss_weight, pixel_loss_weight, perceptual_loss_weight, num_classes, device, scaler)
+            pixel_loss, perceptual_loss, g_loss_weight, pixel_loss_weight, perceptual_loss_weight, num_classes, device)
 
         su.print_stats(epoch, 'end', g_loss_epoch / len(train_loader), d_loss_epoch / len(train_loader), val_real_acc, val_fake_acc, val_g_loss, val_d_loss, fid)
 
