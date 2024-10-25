@@ -5,25 +5,35 @@ from fid.fid_score import calculate_fid
 ################################################################
 # //////////////////////////////////////////////////////////// #
 ################################################################
-def compute_gradient_penalty(discriminator, real_images, fake_images, labels, device):
-    alpha = torch.rand(real_images.size(0), 1, 1, 1, device=device)
+def compute_gradient_penalty(discriminator, real_images, fake_images, labels, device, gp_lambda=10, gp_samples_ratio=0.1):
+    # Determine the number of samples to use for GP
+    batch_size = real_images.size(0)
+    gp_samples = max(1, int(batch_size * gp_samples_ratio))  # Ensure at least one sample
     
-    interpolates = (alpha * real_images + (1 - alpha) * fake_images).requires_grad_(True)
+    # Randomly select a subset of the batch
+    indices = torch.randperm(batch_size)[:gp_samples]
+    real_images_subset = real_images[indices]
+    fake_images_subset = fake_images[indices]
+    labels_subset = labels[indices]
     
-    d_interpolates = discriminator(interpolates, labels)
+    # Compute GP on the subset
+    alpha = torch.rand(gp_samples, 1, 1, 1, device=device)
+    interpolates = (alpha * real_images_subset + (1 - alpha) * fake_images_subset).requires_grad_(True)
     
-    gradients = torch.autograd.grad(
-        outputs=d_interpolates,
-        inputs=interpolates,
-        grad_outputs=torch.ones_like(d_interpolates, device=device),
-        create_graph=True,
-        retain_graph=True,
-        only_inputs=True
-    )[0]
-    
+    with torch.autocast(device_type='cuda', enabled=False):
+        d_interpolates = discriminator(interpolates, labels_subset)
+        grad_outputs = torch.ones_like(d_interpolates, device=device)
+        gradients = torch.autograd.grad(
+            outputs=d_interpolates,
+            inputs=interpolates,
+            grad_outputs=grad_outputs,
+            create_graph=True,
+            retain_graph=True,
+            only_inputs=True
+        )[0]
+        
     gradients = gradients.view(gradients.size(0), -1)
-    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
-    
+    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * gp_lambda
     return gradient_penalty
 
 ################################################################
@@ -51,7 +61,7 @@ def train_discriminator(generator,
     # Discriminator losses
     d_adv_loss = d_loss_fn(real_outputs, fake_outputs)
 
-    gradient_penalty = compute_gradient_penalty(discriminator, real_images, fake_images.detach(), labels, device)
+    gradient_penalty = compute_gradient_penalty(discriminator, real_images, fake_images.detach(), labels, device, gp_lambda=lambda_gp)
         
     d_loss = d_adv_loss + lambda_gp * gradient_penalty
 
