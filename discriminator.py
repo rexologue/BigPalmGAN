@@ -11,7 +11,7 @@ class DiscriminatorBlock(nn.Module):
         super(DiscriminatorBlock, self).__init__()
         self.downsample = downsample
         
-        self.conv1 = spectral_norm(nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1))
+        # self.conv1 = spectral_norm(nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1))
         self.conv2 = spectral_norm(nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1))
         
         self.skip_conv = spectral_norm(nn.Conv2d(in_channels, out_channels, kernel_size=1, padding=0))
@@ -19,8 +19,8 @@ class DiscriminatorBlock(nn.Module):
         self.activation = nn.LeakyReLU(0.1)
 
     def forward(self, x):
-        out = self.activation(x)
-        out = self.conv1(out)
+        # out = self.activation(x)
+        # out = self.conv1(out)
         out = self.activation(out)
         out = self.conv2(out)
         
