@@ -76,7 +76,7 @@ class Discriminator(nn.Module):
         self.embed_dim = 64  # Reduced embedding dimension
         self.embed = nn.Embedding(num_classes, self.embed_dim)
         
-        self.feature_map_dim = 16
+        self.feature_map_dim = 8
 
         self.initial_conv = spectral_norm(nn.Conv2d(3, self.feature_map_dim, kernel_size=3, padding=1))
         
