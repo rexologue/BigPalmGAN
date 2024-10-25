@@ -86,8 +86,8 @@ class Discriminator(nn.Module):
             DiscriminatorBlock(self.feature_map_dim * 4, self.feature_map_dim * 4, downsample=True),   # 64x64 -> 32x32
             DiscriminatorBlock(self.feature_map_dim * 4, self.feature_map_dim * 4, downsample=True),   # 32x32 -> 16x16
             DiscriminatorBlock(self.feature_map_dim * 4, self.feature_map_dim * 8, downsample=True),   # 16x16 -> 8x8
-            DiscriminatorBlock(self.feature_map_dim * 8, self.feature_map_dim * 16, downsample=True),  # 8x8 -> 4x4
-            DiscriminatorBlock(self.feature_map_dim * 16, self.embed_dim, downsample=False),           # 4x4 -> 4x4
+            DiscriminatorBlock(self.feature_map_dim * 8, self.feature_map_dim * 8, downsample=True),  # 8x8 -> 4x4
+            DiscriminatorBlock(self.feature_map_dim * 8, self.embed_dim, downsample=False),           # 4x4 -> 4x4
         ])
         
         self.self_attn = SelfAttn(self.feature_map_dim * 4)  # Insert attention layer after the second block

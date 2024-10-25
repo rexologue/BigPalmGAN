@@ -20,17 +20,16 @@ def compute_gradient_penalty(discriminator, real_images, fake_images, labels, de
     alpha = torch.rand(gp_samples, 1, 1, 1, device=device)
     interpolates = (alpha * real_images_subset + (1 - alpha) * fake_images_subset).requires_grad_(True)
     
-    with torch.autocast(device_type='cuda', enabled=False):
-        d_interpolates = discriminator(interpolates, labels_subset)
-        grad_outputs = torch.ones_like(d_interpolates, device=device)
-        gradients = torch.autograd.grad(
-            outputs=d_interpolates,
-            inputs=interpolates,
-            grad_outputs=grad_outputs,
-            create_graph=True,
-            retain_graph=True,
-            only_inputs=True
-        )[0]
+    d_interpolates = discriminator(interpolates, labels_subset)
+    grad_outputs = torch.ones_like(d_interpolates, device=device)
+    gradients = torch.autograd.grad(
+        outputs=d_interpolates,
+        inputs=interpolates,
+        grad_outputs=grad_outputs,
+        create_graph=True,
+        retain_graph=True,
+        only_inputs=True
+    )[0]
         
     gradients = gradients.view(gradients.size(0), -1)
     gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * gp_lambda
