@@ -75,20 +75,22 @@ class Discriminator(nn.Module):
         self.num_classes = num_classes
         self.embed_dim = 64  # Reduced embedding dimension
         self.embed = nn.Embedding(num_classes, self.embed_dim)
+        
+        self.feature_map_dim = 32
 
-        self.initial_conv = spectral_norm(nn.Conv2d(3, 32, kernel_size=3, padding=1))
+        self.initial_conv = spectral_norm(nn.Conv2d(3, self.feature_map_dim, kernel_size=3, padding=1))
         
         self.blocks = nn.ModuleList([
-            DiscriminatorBlock(32, 64, downsample=True),    # 256x256 -> 128x128
-            DiscriminatorBlock(64, 128, downsample=True),   # 128x128 -> 64x64
-            DiscriminatorBlock(128, 256, downsample=True),   # 64x64 -> 32x32
-            DiscriminatorBlock(256, 256, downsample=True),   # 32x32 -> 16x16
-            DiscriminatorBlock(256, 512, downsample=True),   # 16x16 -> 8x8
-            DiscriminatorBlock(512, 512, downsample=True),   # 8x8 -> 4x4
-            DiscriminatorBlock(512, self.embed_dim, downsample=False),  # 4x4 -> 4x4
+            DiscriminatorBlock(self.feature_map_dim, self.feature_map_dim * 2, downsample=True),    # 256x256 -> 128x128
+            DiscriminatorBlock(self.feature_map_dim * 2, self.feature_map_dim * 4, downsample=True),   # 128x128 -> 64x64
+            DiscriminatorBlock(self.feature_map_dim * 4, self.feature_map_dim * 8, downsample=True),   # 64x64 -> 32x32
+            DiscriminatorBlock(self.feature_map_dim * 8, self.feature_map_dim * 8, downsample=True),   # 32x32 -> 16x16
+            DiscriminatorBlock(self.feature_map_dim * 8, self.feature_map_dim * 16, downsample=True),   # 16x16 -> 8x8
+            DiscriminatorBlock(self.feature_map_dim * 16, self.feature_map_dim * 16, downsample=True),   # 8x8 -> 4x4
+            DiscriminatorBlock(self.feature_map_dim * 16, self.embed_dim, downsample=False),  # 4x4 -> 4x4
         ])
         
-        self.self_attn = SelfAttn(256)  # Insert attention layer after the second block
+        self.self_attn = SelfAttn(self.feature_map_dim * 4)  # Insert attention layer after the second block
         self.activation = nn.LeakyReLU(0.1)
         
         self.fc = spectral_norm(nn.Linear(self.embed_dim, 1))
